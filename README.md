@@ -64,16 +64,21 @@
 
 ```
 repo/
-├── README.md                 このファイル
+├── README.md                        このファイル
 ├── data/
-│   ├── craters_subset.csv    Robbins DBから直径8km以上を抽出・整形（36,377件・約2.8MB）
-│   ├── diviner_global.csv    Diviner正午/深夜0時温度、全球0.5度グリッド（259,200件・約10.2MB）
-│   └── deepcraters.csv       DeepCratersの年代付きクレーターデータ（18,996件・約0.85MB）
+│   ├── craters_subset.csv           Robbins DBから直径8km以上を抽出・整形（36,377件・約2.8MB）
+│   ├── diviner_global.csv           Diviner正午/深夜0時温度、全球0.5度グリッド（259,200件・約10.2MB）
+│   ├── deepcraters.csv              DeepCratersの年代付きクレーターデータ（18,996件・約0.85MB）
+│   ├── maria_boundaries.csv         月の海・大洋23件の中心座標（USGS地名辞典、Ver.2.1で追加）
+│   ├── moon_ephemeris.csv           地球ー月の距離・視直径等、過去5年日次（JPL HORIZONS、Ver.2.1で追加）
+│   └── moon_earth_correlation.csv   月齢・理論潮汐力・地震件数、過去5年日次（Ver.2.1で追加）
 ├── notebooks/
-│   └── explore.ipynb         生徒が触るメインのノートブック（Colab起動を主に想定）
+│   ├── explore.ipynb                標準編（情報Ⅰ範囲、Colab起動を主に想定）
+│   └── explore_advanced.ipynb       発展編（scipy.stats等、Ver.2.1で追加）
 ├── docs/
-│   └── worksheet.pdf         紙のワークシート（予想を書く欄・考察欄）
-├── requirements.txt          ローカル実行用
+│   ├── worksheet.pdf                紙のワークシート（予想を書く欄・考察欄）
+│   └── requirements_v2.1.md         拡張版の要件定義書（データ検証結果を含む）
+├── requirements.txt                 ローカル実行用
 └── .gitignore
 ```
 

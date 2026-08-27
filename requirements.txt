@@ -1,8 +1,14 @@
 # ローカル実行用（Jupyter / VSCode）
 # Google Colab上ではこれらは標準搭載済みのため、requirements.txtのインストールは不要です。
+
+# 標準編（explore.ipynb）
 pandas>=2.0
 numpy>=1.24
 matplotlib>=3.7
 ipywidgets>=8.0
 notebook>=7.0
 jupyterlab>=4.0
+
+# 発展編（explore_advanced.ipynb）のみで使用
+scipy>=1.11
+seaborn>=0.13
