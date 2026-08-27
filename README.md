@@ -59,7 +59,8 @@
 4. 緯度と正午の温度の関係
 5. 同一地点の昼夜の温度差（正午と深夜0時の温度差）
 6. クレーターの推定年代と、直径・分布との関係（DeepCraters追加により可能）
-7. 月の南極で太陽光発電に向いた場所を探す（日照率が高く永久影の少ない場所、Ver.2.1で追加）
+7. 月の南極・北極で太陽光発電に向いた場所を探す（日照率が高く永久影の少ない場所、Ver.2.1で追加）
+8. 地質年代・地形区分マップで、時代ごと・Highland/Mareごとの分布を確認する（USGS統合地質図、Ver.2.1で追加）
 
 ## 4. リポジトリ構成
 
@@ -74,7 +75,8 @@ repo/
 │   ├── moon_ephemeris.csv           地球ー月の距離・視直径等、過去5年日次（JPL HORIZONS、Ver.2.1で追加）
 │   ├── moon_earth_correlation.csv   月齢・理論潮汐力・地震件数、過去5年日次（Ver.2.1で追加）
 │   ├── craters_3d.csv               クレーターの直径・深さ（Wang & Wu 2021、直径10km以上・24,982件・約1.1MB、Ver.2.1で追加）
-│   └── lola_south_pole_illumination.csv  月南極の平均日照率・永久影割合、約1kmグリッド（78,961件・約2.3MB、Ver.2.1で追加）
+│   ├── lola_polar_illumination.csv  月南極・北極の平均日照率・永久影割合、約1kmグリッド（157,922件・約4.4MB、Ver.2.1で追加）
+│   └── moon_geology_grid.csv        月の地質年代・地形区分、1度グリッド（USGS統合地質図、64,800件・約3.1MB、Ver.2.1で追加）
 ├── notebooks/
 │   ├── explore.ipynb                標準編（情報Ⅰ範囲、Colab起動を主に想定）
 │   └── explore_advanced.ipynb       発展編（scipy.stats等、Ver.2.1で追加）
