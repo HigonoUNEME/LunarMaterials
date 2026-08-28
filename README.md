@@ -22,7 +22,13 @@
 >   科学的妥当性に疑義がある仮説を「発見」の形で高校生に提示すべきでない、という判断
 >   による（ファイル自体は削除せず保持）
 > - `maria_boundaries.csv`・`moon_ephemeris.csv`・`moon_geology_grid.csv`は
->   **優先度3として未着手のまま**（コード上は組み込み済みだが正式採用は未確定）
+>   **優先度3として未着手**。当初`explore.ipynb`のUIに実装したまま残っていた不整合が
+>   発見されたため、**ノートブックのデータセット選択肢からも削除済み**
+>   （CSVファイル自体は`data/`に残す。文書上の状態とノートブックの実物は常に一致させる）
+>
+> **UI改善（Ver.1.3）**：緯度経度の散布図に月面画像（NASA CGI Moon Kit、パブリックドメイン）を
+> 背景表示。色分け機能を、正式採用済みのデータセットの列（DeepCratersの推定年代、
+> クレーターの深さ÷直径比、Diviner昼夜温度差、LOLA平均日照率）で再構築した。
 
 ---
 
@@ -71,8 +77,7 @@
 4. 緯度と正午の温度の関係
 5. 同一地点の昼夜の温度差（正午と深夜0時の温度差）
 6. クレーターの推定年代と、直径・分布との関係（DeepCraters追加により可能）
-7. 月の南極・北極で太陽光発電に向いた場所を探す（日照率が高く永久影の少ない場所、Ver.2.1で追加）
-8. 地質年代・地形区分マップで、時代ごと・Highland/Mareごとの分布を確認する（USGS統合地質図、Ver.2.1で追加）
+7. 月の南極・北極で太陽光発電に向いた場所を探す（日照率が高く永久影の少ない場所。ただし答え合わせ用の永久影率は自分で閾値を決めた後にのみ表示、Ver.1.3で採用確定）
 
 ## 4. リポジトリ構成
 
@@ -86,14 +91,15 @@ repo/
 │   ├── craters_3d.csv               クレーターの直径・深さ（Wang & Wu 2021、直径10km以上・24,982件・約1.1MB）【採用確定 Ver.1.3】
 │   ├── lola_polar_illumination.csv  月南極・北極の平均日照率・永久影割合、約1kmグリッド（157,922件・約4.4MB）【採用確定 Ver.1.3、絶対値は要注意】
 │   ├── moon_earth_correlation.csv   月齢・理論潮汐力・地震件数、過去5年日次【コアスコープから除外確定 Ver.1.3。削除はせず保持】
-│   ├── maria_boundaries.csv         月の海・大洋23件の中心座標（USGS地名辞典）【優先度3・未着手】
-│   ├── moon_ephemeris.csv           地球ー月の距離・視直径等、過去5年日次（JPL HORIZONS）【優先度3・未着手】
-│   └── moon_geology_grid.csv        月の地質年代・地形区分、1度グリッド（USGS統合地質図、64,800件・約3.1MB）【優先度3・未着手】
+│   ├── maria_boundaries.csv         月の海・大洋23件の中心座標（USGS地名辞典）【優先度3・未着手。explore.ipynbのUIからは削除済み】
+│   ├── moon_ephemeris.csv           地球ー月の距離・視直径等、過去5年日次（JPL HORIZONS）【優先度3・未着手。explore.ipynbのUIからは削除済み】
+│   └── moon_geology_grid.csv        月の地質年代・地形区分、1度グリッド（USGS統合地質図、64,800件・約3.1MB）【優先度3・未着手。explore.ipynbのUIからは削除済み】
 ├── notebooks/
-│   ├── explore.ipynb                標準編（情報Ⅰ範囲、Colab起動を主に想定）
+│   ├── explore.ipynb                標準編（情報Ⅰ範囲、Colab起動を主に想定。背景に月面画像を表示）
 │   ├── explore_advanced.ipynb       発展編（scipy.stats等、Ver.2.1で追加）
 │   └── assets/
-│       └── NotoSansJP-Regular.ttf   グラフの日本語表示用フォント（同梱、Ver.2.1で追加）
+│       ├── NotoSansJP-Regular.ttf   グラフの日本語表示用フォント（同梱、Ver.2.1で追加）
+│       └── lroc_color_2k.jpg        月面画像（NASA CGI Moon Kit、正距円筒図法、Ver.1.3で追加）
 ├── docs/
 │   ├── worksheet.pdf                紙のワークシート（予想を書く欄・考察欄）
 │   ├── requirements_v2.1.md         拡張版の要件定義書（データ検証結果を含む）
