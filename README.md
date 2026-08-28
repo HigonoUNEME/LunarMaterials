@@ -12,13 +12,17 @@
 > 追加インストールが必要だったため、その都度ユーザーの許可を得て導入した
 > （生徒側の実行環境には影響しない。詳細はrequirements_v2.1.md §0.1）。
 >
-> **Ver.1.2による方針転換**：拡張データセットをまとめて判定したことがVer.2.1で
+> **Ver.1.2〜1.3による方針転換**：拡張データセットをまとめて判定したことがVer.2.1で
 > 8データセットまで膨らんだ一因との振り返りを受け、以後は
-> [docs/requirements_v1.2.md](docs/requirements_v1.2.md) に基づき、優先順位をつけて
-> 1つずつ検証・判断する運用に改めた。あわせて **DS-8（`moon_earth_correlation.csv`）は
-> コアスコープから除外確定**とした——データ・手法自体は実データで検証済みで問題ないが、
-> 「月と地震に関係がある」という誤解を招くリスクを重視した教育的判断による（技術的な
-> 記録はrequirements_v2.1.md §2.5に残し、ファイル自体も削除せず保持している）。
+> [docs/requirements_v1.2.md](docs/requirements_v1.2.md) /
+> [docs/requirements_v1.3.md](docs/requirements_v1.3.md) に基づき、優先順位をつけて
+> 1つずつ検証・判断する運用に改めた。判定結果：
+> - **`craters_3d.csv`・`lola_polar_illumination.csv`は採用確定**（実データ検証・検算済み）
+> - **`moon_earth_correlation.csv`（DS-8）はコアスコープから除外確定**——理由は
+>   科学的妥当性に疑義がある仮説を「発見」の形で高校生に提示すべきでない、という判断
+>   による（ファイル自体は削除せず保持）
+> - `maria_boundaries.csv`・`moon_ephemeris.csv`・`moon_geology_grid.csv`は
+>   **優先度3として未着手のまま**（コード上は組み込み済みだが正式採用は未確定）
 
 ---
 
@@ -79,12 +83,12 @@ repo/
 │   ├── craters_subset.csv           Robbins DBから直径8km以上を抽出・整形（36,377件・約2.8MB）
 │   ├── diviner_global.csv           Diviner正午/深夜0時温度、全球0.5度グリッド（259,200件・約10.2MB）
 │   ├── deepcraters.csv              DeepCratersの年代付きクレーターデータ（18,996件・約0.85MB）
-│   ├── maria_boundaries.csv         月の海・大洋23件の中心座標（USGS地名辞典、Ver.2.1で追加）
-│   ├── moon_ephemeris.csv           地球ー月の距離・視直径等、過去5年日次（JPL HORIZONS、Ver.2.1で追加）
-│   ├── moon_earth_correlation.csv   月齢・理論潮汐力・地震件数、過去5年日次（Ver.1.2でコアスコープから除外確定。削除はせず保持）
-│   ├── craters_3d.csv               クレーターの直径・深さ（Wang & Wu 2021、直径10km以上・24,982件・約1.1MB。Ver.1.2優先度1で検証済み）
-│   ├── lola_polar_illumination.csv  月南極・北極の平均日照率・永久影割合、約1kmグリッド（157,922件・約4.4MB。Ver.1.2優先度2で検証済み、採否は検討中）
-│   └── moon_geology_grid.csv        月の地質年代・地形区分、1度グリッド（USGS統合地質図、64,800件・約3.1MB、Ver.2.1で追加）
+│   ├── craters_3d.csv               クレーターの直径・深さ（Wang & Wu 2021、直径10km以上・24,982件・約1.1MB）【採用確定 Ver.1.3】
+│   ├── lola_polar_illumination.csv  月南極・北極の平均日照率・永久影割合、約1kmグリッド（157,922件・約4.4MB）【採用確定 Ver.1.3、絶対値は要注意】
+│   ├── moon_earth_correlation.csv   月齢・理論潮汐力・地震件数、過去5年日次【コアスコープから除外確定 Ver.1.3。削除はせず保持】
+│   ├── maria_boundaries.csv         月の海・大洋23件の中心座標（USGS地名辞典）【優先度3・未着手】
+│   ├── moon_ephemeris.csv           地球ー月の距離・視直径等、過去5年日次（JPL HORIZONS）【優先度3・未着手】
+│   └── moon_geology_grid.csv        月の地質年代・地形区分、1度グリッド（USGS統合地質図、64,800件・約3.1MB）【優先度3・未着手】
 ├── notebooks/
 │   ├── explore.ipynb                標準編（情報Ⅰ範囲、Colab起動を主に想定）
 │   ├── explore_advanced.ipynb       発展編（scipy.stats等、Ver.2.1で追加）
@@ -93,7 +97,8 @@ repo/
 ├── docs/
 │   ├── worksheet.pdf                紙のワークシート（予想を書く欄・考察欄）
 │   ├── requirements_v2.1.md         拡張版の要件定義書（データ検証結果を含む）
-│   └── requirements_v1.2.md         方針転換後の要件定義書（1件ずつ検証する運用、開発者本人による原文）
+│   ├── requirements_v1.2.md         方針転換後の要件定義書（1件ずつ検証する運用、開発者本人による原文）
+│   └── requirements_v1.3.md         優先度1・2の検証結果（採用確定）、開発者本人による原文
 ├── requirements.txt                 ローカル実行用
 ├── run_notebook.bat                 ローカルでJupyterを起動する補助スクリプト（Windows）
 └── .gitignore
