@@ -79,11 +79,14 @@ repo/
 │   └── moon_geology_grid.csv        月の地質年代・地形区分、1度グリッド（USGS統合地質図、64,800件・約3.1MB、Ver.2.1で追加）
 ├── notebooks/
 │   ├── explore.ipynb                標準編（情報Ⅰ範囲、Colab起動を主に想定）
-│   └── explore_advanced.ipynb       発展編（scipy.stats等、Ver.2.1で追加）
+│   ├── explore_advanced.ipynb       発展編（scipy.stats等、Ver.2.1で追加）
+│   └── assets/
+│       └── NotoSansJP-Regular.ttf   グラフの日本語表示用フォント（同梱、Ver.2.1で追加）
 ├── docs/
 │   ├── worksheet.pdf                紙のワークシート（予想を書く欄・考察欄）
 │   └── requirements_v2.1.md         拡張版の要件定義書（データ検証結果を含む）
 ├── requirements.txt                 ローカル実行用
+├── run_notebook.bat                 ローカルでJupyterを起動する補助スクリプト（Windows）
 └── .gitignore
 ```
 
@@ -94,6 +97,15 @@ repo/
 - 主：Google Colaboratory（「Open in Colab」ボタンでブラウザのみで起動）
 - 従：ローカル環境（Jupyter／VSCode、`requirements.txt`で環境構築）
 - 変数選択のUIは `ipywidgets` を使用し、コードを直接書かなくても操作できるようにする
+
+### 実機テストで判明した問題と対処
+
+- **日本語文字化け**：ローカルのJupyter（Windows）で実際にグラフを描画したところ、
+  matplotlibの既定フォントに日本語グリフが無く、軸ラベル等が文字化けする現象を確認した。
+  `japanize-matplotlib`（定番の対処パッケージ）はPython 3.12で`distutils`廃止により
+  動作しないことが判明したため、追加パッケージ無しで解決できる方法として、
+  Noto Sans JPフォントファイルを`notebooks/assets/`に同梱し、ノートブック内で
+  `matplotlib.font_manager`から直接読み込む方式に変更した（Colab・ローカルどちらでも動作）。
 
 ## 6. 学習指導要領との対応（概要）
 
