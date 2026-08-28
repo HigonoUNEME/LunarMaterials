@@ -18,9 +18,11 @@
 > [docs/requirements_v1.3.md](docs/requirements_v1.3.md) に基づき、優先順位をつけて
 > 1つずつ検証・判断する運用に改めた。判定結果：
 > - **`craters_3d.csv`・`lola_polar_illumination.csv`は採用確定**（実データ検証・検算済み）
-> - **`moon_earth_correlation.csv`（DS-8）はコアスコープから除外確定**——理由は
->   科学的妥当性に疑義がある仮説を「発見」の形で高校生に提示すべきでない、という判断
->   による（ファイル自体は削除せず保持）
+> - **`moon_earth_correlation.csv`（DS-8）はコアスコープから完全除外確定（Ver.1.4）**——
+>   理由は科学的妥当性に疑義がある仮説を「発見」の形で高校生に提示すべきでない、という
+>   判断による。`explore_advanced.ipynb`に実装されていたDS-8のセクション（月齢と地震件数の
+>   相関検定）は**全セル削除済み**。`explore.ipynb`の問いのヒントにあった誘導注記も削除済み。
+>   CSVファイル自体は`data/`に残すが、どちらのノートブックからも参照しない。
 > - `maria_boundaries.csv`・`moon_ephemeris.csv`・`moon_geology_grid.csv`は
 >   **優先度3として未着手**。当初`explore.ipynb`のUIに実装したまま残っていた不整合が
 >   発見されたため、**ノートブックのデータセット選択肢からも削除済み**
@@ -29,6 +31,10 @@
 > **UI改善（Ver.1.3）**：緯度経度の散布図に月面画像（NASA CGI Moon Kit、パブリックドメイン）を
 > 背景表示。色分け機能を、正式採用済みのデータセットの列（DeepCratersの推定年代、
 > クレーターの深さ÷直径比、Diviner昼夜温度差、LOLA平均日照率）で再構築した。
+>
+> **MVP確定（Ver.1.4）**：[docs/requirements_v1.4.md](docs/requirements_v1.4.md)により、
+> データセット構成・機能をここで凍結。追加のデータセット・UI機能は今後の展望として
+> report_v2.pdfに記録し、本教材（MVP）には反映しない。
 
 ---
 
@@ -90,13 +96,13 @@ repo/
 │   ├── deepcraters.csv              DeepCratersの年代付きクレーターデータ（18,996件・約0.85MB）
 │   ├── craters_3d.csv               クレーターの直径・深さ（Wang & Wu 2021、直径10km以上・24,982件・約1.1MB）【採用確定 Ver.1.3】
 │   ├── lola_polar_illumination.csv  月南極・北極の平均日照率・永久影割合、約1kmグリッド（157,922件・約4.4MB）【採用確定 Ver.1.3、絶対値は要注意】
-│   ├── moon_earth_correlation.csv   月齢・理論潮汐力・地震件数、過去5年日次【コアスコープから除外確定 Ver.1.3。削除はせず保持】
+│   ├── moon_earth_correlation.csv   月齢・理論潮汐力・地震件数、過去5年日次【完全除外確定 Ver.1.4。explore_advanced.ipynbからも削除済み、削除はせず保持】
 │   ├── maria_boundaries.csv         月の海・大洋23件の中心座標（USGS地名辞典）【優先度3・未着手。explore.ipynbのUIからは削除済み】
 │   ├── moon_ephemeris.csv           地球ー月の距離・視直径等、過去5年日次（JPL HORIZONS）【優先度3・未着手。explore.ipynbのUIからは削除済み】
 │   └── moon_geology_grid.csv        月の地質年代・地形区分、1度グリッド（USGS統合地質図、64,800件・約3.1MB）【優先度3・未着手。explore.ipynbのUIからは削除済み】
 ├── notebooks/
 │   ├── explore.ipynb                標準編（情報Ⅰ範囲、Colab起動を主に想定。背景に月面画像を表示）
-│   ├── explore_advanced.ipynb       発展編（scipy.stats等、Ver.2.1で追加）
+│   ├── explore_advanced.ipynb       発展編（numpy.polyfitによるべき乗則フィットのみ。DS-8はVer.1.4で完全削除）
 │   └── assets/
 │       ├── NotoSansJP-Regular.ttf   グラフの日本語表示用フォント（同梱、Ver.2.1で追加）
 │       └── lroc_color_2k.jpg        月面画像（NASA CGI Moon Kit、正距円筒図法、Ver.1.3で追加）
@@ -104,7 +110,8 @@ repo/
 │   ├── worksheet.pdf                紙のワークシート（予想を書く欄・考察欄）
 │   ├── requirements_v2.1.md         拡張版の要件定義書（データ検証結果を含む）
 │   ├── requirements_v1.2.md         方針転換後の要件定義書（1件ずつ検証する運用、開発者本人による原文）
-│   └── requirements_v1.3.md         優先度1・2の検証結果（採用確定）、開発者本人による原文
+│   ├── requirements_v1.3.md         優先度1・2の検証結果（採用確定）、開発者本人による原文
+│   └── requirements_v1.4.md         MVP確定版（DS-8完全削除、スコープ凍結）、開発者本人による原文
 ├── requirements.txt                 ローカル実行用
 ├── run_notebook.bat                 ローカルでJupyterを起動する補助スクリプト（Windows）
 └── .gitignore
