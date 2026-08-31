@@ -16,6 +16,12 @@
     温度 = load('温度')
     赤道 = region(温度, lat=(-10, 10))
     summary(赤道, 'temp_noon_K', 'temp_midnight_K')   # 平均・分散など
+    diurnal_curve(赤道)                               # 1日の温度変化カーブ
+
+'温度'（Diviner）データは、地点ごとに現地時間 0〜23時の温度 `t_lt00`〜`t_lt23` を持つ
+（Williams et al. 2017 の瞬間温度マップ24枚を現地時間に位相合わせしたもの）。
+昼夜の変化カーブが意味を持つのは概ね |緯度| < 70度。極付近は太陽が地平線近くを
+回るだけで「昼夜」がはっきりせず、カーブは平坦・不規則になる（物理的にそうなる）。
 """
 import os
 
@@ -25,11 +31,15 @@ import matplotlib.pyplot as plt
 import matplotlib.font_manager as fm
 
 __all__ = [
-    'load', 'DATASETS',
+    'load', 'DATASETS', 'LT_COLS',
     'region', 'south_pole', 'north_pole', 'classify_by_box',
     'summary', 'summary_by', 'grid_count',
     'scatter', 'hist', 'site_score',
+    'diurnal_curve', 'daily_swing',
 ]
+
+# Diviner の現地時間 0〜23時の温度列
+LT_COLS = [f't_lt{h:02d}' for h in range(24)]
 
 # --------------------------------------------------------------------------
 # ファイルの場所を探す（Colab／ローカル、カレントが repo 直下でも notebooks/ でも動くように）
@@ -70,7 +80,7 @@ DATASETS = {
     'クレーター':       'craters_subset.csv',          # Robbins DB（緯度経度・直径・形）
     'クレーター深さ':   'craters_3d.csv',              # Wang & Wu 2021（直径・深さ）
     'クレーター年代':   'deepcraters.csv',             # DeepCraters（推定地質年代 1〜5）
-    '温度':             'diviner_global.csv',          # Diviner（正午/深夜0時の温度・昼夜差）
+    '温度':             'diviner_global.csv.gz',       # Diviner（現地時間0〜23時の温度カーブ）
     '極域日照':         'lola_polar_illumination.csv',  # LOLA（南極・北極の平均日照率・永久影率）
 }
 
@@ -315,3 +325,48 @@ def site_score(df, want, top=10):
         score += w * norm
     out['スコア'] = score / total_w
     return out.sort_values('スコア', ascending=False).head(top)
+
+
+# --------------------------------------------------------------------------
+# 温度の1日の変化（Diviner の t_lt00〜t_lt23 を使う。層2a ステップ1）
+# --------------------------------------------------------------------------
+def diurnal_curve(df, show=True):
+    """（しぼり込んだ）温度データの、現地時間ごとの平均温度カーブを描く／返す。
+
+        赤道 = region(load('温度'), lat=(-5, 5))
+        diurnal_curve(赤道)
+
+    返り値は現地時間 0〜23時の平均温度（24個）の Series。
+    """
+    mean_curve = df[LT_COLS].mean()
+    mean_curve.index = range(24)
+    if show:
+        fig, ax = plt.subplots(figsize=(7, 4))
+        ax.plot(range(24), mean_curve.values, marker='o')
+        ax.set_xlabel('現地時間 [時]')
+        ax.set_ylabel('平均温度 [K]')
+        ax.set_xticks(range(0, 24, 3))
+        ax.set_title(f'1日の温度変化（{len(df):,} 地点の平均）')
+        ax.grid(alpha=0.3)
+        plt.tight_layout()
+        plt.show()
+        swing = mean_curve.max() - mean_curve.min()
+        print(f'いちばん暑い時刻: {mean_curve.idxmax()}時（{mean_curve.max():.0f} K）')
+        print(f'いちばん寒い時刻: {mean_curve.idxmin()}時（{mean_curve.min():.0f} K）')
+        print(f'1日の気温差（平均カーブの最大－最小）: {swing:.0f} K')
+    return mean_curve
+
+
+def daily_swing(df):
+    """各地点について、1日の温度カーブ（t_lt00〜t_lt23）から
+    平均・較差（最大－最小）・標準偏差 を計算した列を足して返す。
+
+        band = daily_swing(region(load('温度'), lat=(-5, 5)))
+        summary(band, 't_mean_K', 't_swing_K', 't_std_K')
+    """
+    out = df.copy()
+    t = out[LT_COLS]
+    out['t_mean_K'] = t.mean(axis=1)
+    out['t_swing_K'] = t.max(axis=1) - t.min(axis=1)
+    out['t_std_K'] = t.std(axis=1)
+    return out
