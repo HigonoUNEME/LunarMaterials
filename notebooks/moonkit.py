@@ -32,7 +32,7 @@ import matplotlib.font_manager as fm
 
 __all__ = [
     'load', 'DATASETS', 'LT_COLS',
-    'region', 'south_pole', 'north_pole', 'classify_by_box',
+    'region', 'south_pole', 'north_pole', 'classify_by_box', 'join_grid',
     'summary', 'summary_by', 'grid_count',
     'scatter', 'hist', 'site_score',
     'diurnal_curve', 'daily_swing',
@@ -149,23 +149,44 @@ def north_pole(df, deg=80):
 def classify_by_box(df, boxes, colname='区分', other='その他'):
     """緯度・経度の四角い範囲で地点にラベルを付けた列を足す（例: 海 と 陸 を分ける）。
 
+    1つのラベルに箱を複数与えたいときは、箱をリストにする。
+
         boxes = {
-            '雨の海あたり': {'lat': (15, 45), 'lon': (-30, 5)},
-            '高地あたり':   {'lat': (-60, -30), 'lon': (0, 60)},
+            '海': [{'lat': (20, 50), 'lon': (-40, 5)},     # 雨の海
+                   {'lat': (-5, 20), 'lon': (18, 45)}],    # 静かの海
+            '陸': {'lat': (-55, -25), 'lon': (-15, 35)},   # 南の高地
         }
-        classify_by_box(クレーター, boxes)   # 'その他' はどの箱にも入らなかった地点
+        classify_by_box(クレーター, boxes)   # どの箱にも入らない地点は 'その他'
     """
     lat_c, lon_c = _latlon_cols(df)
     out = df.copy()
     out[colname] = other
     for label, box in boxes.items():
-        m = pd.Series(True, index=out.index)
-        if 'lat' in box:
-            m &= out[lat_c].between(box['lat'][0], box['lat'][1])
-        if 'lon' in box:
-            m &= out[lon_c].between(box['lon'][0], box['lon'][1])
-        out.loc[m, colname] = label
+        for b in (box if isinstance(box, list) else [box]):
+            m = pd.Series(True, index=out.index)
+            if 'lat' in b:
+                m &= out[lat_c].between(b['lat'][0], b['lat'][1])
+            if 'lon' in b:
+                m &= out[lon_c].between(b['lon'][0], b['lon'][1])
+            out.loc[m, colname] = label
     return out
+
+
+def join_grid(left, right, value_cols, step=0.5):
+    """left の各地点に、同じ緯度経度マス（step 度）にある right の列（value_cols の平均）を
+    くっつけて返す。粒度の違うデータセットを緯度経度でつなぐときに使う。
+
+        極 = south_pole(load('極域日照'))
+        極 = join_grid(極, daily_swing(load('温度')), ['t_swing_K'])
+    """
+    if isinstance(value_cols, str):
+        value_cols = [value_cols]
+    lla, llo = _latlon_cols(left)
+    rla, rlo = _latlon_cols(right)
+    key_r = list(zip(np.floor(right[rla] / step) * step, np.floor(right[rlo] / step) * step))
+    agg = right.assign(_gk=key_r).groupby('_gk')[value_cols].mean()
+    key_l = list(zip(np.floor(left[lla] / step) * step, np.floor(left[llo] / step) * step))
+    return left.assign(_gk=key_l).join(agg, on='_gk').drop(columns='_gk')
 
 
 # --------------------------------------------------------------------------
@@ -274,7 +295,7 @@ def scatter(df, x, y, color=None, moon_bg=True, logx=False, logy=False,
     plt.tight_layout()
     plt.show()
 
-    if x != y and plot_df[x].dtype.kind in 'if' and plot_df[y].dtype.kind in 'if':
+    if not is_map and x != y and plot_df[x].dtype.kind in 'if' and plot_df[y].dtype.kind in 'if':
         r = plot_df[[x, y]].corr().iloc[0, 1]
         print(f'相関係数 r = {r:.3f}')
 
@@ -312,7 +333,7 @@ def site_score(df, want, top=10):
     各列を (値 - 最小) / (最大 - 最小) で 0〜1 に直し、'低い' なら 1 から引く。
     それらを重みで加重平均したものが 'スコア' 列（0〜1、大きいほど条件に合う）。
     """
-    out = df.copy()
+    out = df.dropna(subset=list(want)).copy()
     total_w = sum(w for _, w in want.values())
     score = pd.Series(0.0, index=out.index)
     for col, (direction, w) in want.items():
@@ -324,7 +345,8 @@ def site_score(df, want, top=10):
         out[f'_norm_{col}'] = norm
         score += w * norm
     out['スコア'] = score / total_w
-    return out.sort_values('スコア', ascending=False).head(top)
+    out = out.sort_values('スコア', ascending=False)
+    return out.head(top) if top is not None else out
 
 
 # --------------------------------------------------------------------------

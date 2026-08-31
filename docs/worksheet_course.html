@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>ムーンベース最適地ワークシート</title>
+<style>
+  * { box-sizing: border-box; }
+  html { font-family: "Yu Gothic", "Hiragino Kaku Gothic ProN", "Noto Sans JP", sans-serif;
+         color: #1a1a1a; font-size: 10.5pt; line-height: 1.6; }
+  body { margin: 0; }
+  h1 { font-size: 19pt; margin: 0 0 2mm; border-bottom: 2.5px solid #1a2f4b; padding-bottom: 2mm; }
+  .lead { background: #eef1f6; padding: 3mm 4mm; border-radius: 2px; font-size: 9.5pt; margin: 3mm 0 5mm; }
+  .band { background: #1a2f4b; color: #fff; font-weight: 700; padding: 2mm 3mm; margin: 6mm 0 3mm;
+          font-size: 11.5pt; border-radius: 2px; }
+  .band .step { opacity: .7; font-weight: 400; font-size: 9pt; margin-left: 1mm; }
+  .row { display: flex; gap: 6mm; align-items: baseline; margin-bottom: 3mm; }
+  .row .lbl { white-space: nowrap; }
+  .fill { flex: 1; border-bottom: 1px solid #999; min-height: 6mm; }
+  .box { border: 1px solid #999; border-radius: 2px; min-height: 20mm; padding: 2mm 3mm; margin: 1mm 0 4mm; }
+  .box.sm { min-height: 13mm; }
+  .box.lg { min-height: 30mm; }
+  .hint { font-size: 9pt; color: #555; margin: 0 0 2mm; }
+  table { border-collapse: collapse; width: 100%; margin: 2mm 0 4mm; font-size: 9.5pt; }
+  th, td { border: 1px solid #999; padding: 1.6mm 2mm; text-align: left; }
+  th { background: #eef1f6; }
+  .mission td:first-child { white-space: nowrap; font-weight: 700; }
+  .check { font-size: 11pt; letter-spacing: 1px; }
+  .pagebreak { page-break-before: always; }
+  .small { font-size: 9pt; color: #555; }
+  @page { size: A4; margin: 14mm 13mm; }
+</style>
+</head>
+<body>
+
+<h1>月データでムーンベースの場所を決めよう</h1>
+
+<div class="row">
+  <span class="lbl">組・番号</span><span class="fill"></span>
+  <span class="lbl">名前</span><span class="fill"></span>
+  <span class="lbl">日付</span><span class="fill"></span>
+</div>
+
+<div class="lead">
+  ノートブック <code>course_moonbase.ipynb</code> を使いながら記入します。各ステップで、
+  <b>まず予想を書き</b> → セルを実行 → <b>結果を記録</b> → <b>気づいたこと</b> を書きます。
+</div>
+
+<div class="band">あなたのミッションを1つ選ぶ（□にチェック）</div>
+<table class="mission">
+  <tr><th style="width:8mm"></th><th style="width:42mm">ミッション</th><th>基地に必要なこと</th></tr>
+  <tr><td class="check">☐</td><td>☀️ 太陽光発電基地</td><td>一年中よく日が当たること（発電したい）</td></tr>
+  <tr><td class="check">☐</td><td>🧊 氷採掘基地</td><td>氷がありそうなこと（＝ずっと日が当たらない「永久影」）</td></tr>
+  <tr><td class="check">☐</td><td>🏠 有人基地（人が住む）</td><td>電力も使えて、かつ1日の温度変化がおだやかなこと</td></tr>
+</table>
+
+<div class="band">ステップ1<span class="step">月の温度は1日でどれくらい変わる？</span></div>
+<p class="hint">月には空気（大気）がありません。地球の砂漠でも昼夜差はせいぜい 20〜30 ℃ です。</p>
+<b>予想</b>：月の1日の温度差は何 ℃ くらい？　なぜそう思う？
+<div class="box"></div>
+<b>結果</b>（<code>my_band</code> に入れた緯度の範囲＝<span class="fill" style="display:inline-block;width:40mm"></span>）
+<table>
+  <tr><th>1日の平均温度 t_mean_K</th><th>1日の温度差 t_swing_K</th><th>ばらつき t_std_K</th><th>いちばん暑い時刻／寒い時刻</th></tr>
+  <tr><td style="height:8mm"></td><td></td><td></td><td></td></tr>
+</table>
+<b>気づいたこと</b>：なぜこんなに差が大きい？　温度カーブの形（朝の上がり方と夕方〜夜の下がり方）は左右対称？
+<div class="box"></div>
+
+<div class="band">ステップ2<span class="step">月の「海」と「陸」で何が違う？</span></div>
+<p class="hint">黒く平らな「海（マリア）」と、白くでこぼこの「陸（高地）」。</p>
+<b>予想</b>：海と陸、どちらがクレーターが多い？
+<div class="box sm"></div>
+<b>結果</b>
+<table>
+  <tr><th></th><th>クレーターの数</th><th>直径の平均 [km]</th><th>直径のばらつき（分散）</th></tr>
+  <tr><td>海</td><td style="height:8mm"></td><td></td><td></td></tr>
+  <tr><td>陸</td><td></td><td></td><td></td></tr>
+</table>
+<b>気づいたこと</b>：海のほうがクレーターが少ないのはなぜ？
+<div class="box"></div>
+
+<div class="band">ステップ3<span class="step">月の南極を細かく見る</span></div>
+<p class="hint">南極には「一年中日が当たらない場所（永久影）」と「ほぼずっと日が当たる場所」がとなり合っています。</p>
+<b>予想</b>：南極の「平均日照率」のヒストグラムはどんな形になる？
+<div class="box sm"></div>
+<div class="row">
+  <span class="lbl"><b>自分で決めたしきい値</b>（これより日照率が低ければ永久影だろう）</span>
+  <span class="fill" style="max-width:30mm"></span><span class="lbl">%</span>
+</div>
+<div class="row">
+  <span class="lbl">そのしきい値に当てはまった地点の数</span>
+  <span class="fill" style="max-width:40mm"></span><span class="lbl">個</span>
+</div>
+<b>気づいたこと</b>：しきい値を大きく（ゆるく）すると地点の数はどう変わる？　なぜ？
+<div class="box"></div>
+
+<div class="band">ステップ4<span class="step">あなたのミッションの基地はどこ？</span></div>
+<b>あなたが <code>want</code> に設定した条件と重み</b>：
+<div class="box sm"></div>
+<b>点数が高かった場所（上位）</b>
+<table>
+  <tr><th>順位</th><th>緯度</th><th>経度</th><th>日照率 %</th><th>永久影率</th><th>1日の温度差 K</th><th>スコア</th></tr>
+  <tr><td>1</td><td style="height:7mm"></td><td></td><td></td><td></td><td></td><td></td></tr>
+  <tr><td>2</td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+  <tr><td>3</td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+</table>
+<b>「ここに基地を建てる」と決めた1地点</b>：　緯度 <span class="fill" style="display:inline-block;width:28mm"></span>　経度 <span class="fill" style="display:inline-block;width:28mm"></span>
+<p class="hint">その理由を3つ以上の文で（どの条件をどれくらい重く見たか、他の候補と比べてなぜここか）</p>
+<div class="box lg"></div>
+
+<div class="band">ステップ5<span class="step">他の班と比べる</span></div>
+<table>
+  <tr><th style="width:45mm">他の班のミッション</th><th>選んだ場所（緯度・経度）</th><th>自分の場所との違い</th></tr>
+  <tr><td style="height:8mm"></td><td></td><td></td></tr>
+  <tr><td style="height:8mm"></td><td></td><td></td></tr>
+</table>
+<b>わかったこと</b>：同じデータを使っているのに、なぜ班ごとに最適地が違った？
+「月面基地の最適地」に1つの正解はある？
+<div class="box lg"></div>
+
+<p class="small">データ出典：USGS（Robbins クレーターDB）／UCLA Diviner（Williams et al. 2017）／
+LRO LOLA（Mazarico et al. 2011）。日照率の絶対値は他の文献の数字と単純比較しないこと（相対的な明るさの目安として使う）。</p>
+
+</body>
+</html>
