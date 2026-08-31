@@ -1,154 +1,127 @@
-# 月データ探索教材（仮称）
+# 月データ探索教材
 
-高校生が、月に関する3つの公開データセットを自由に組み合わせながら、
-「気になる関係」を自分で見つけ出す探究教材。
+高校生が、月の公開データ（クレーター・温度・極域日照）を使って
+**情報Ⅰの範囲（散布図・基本統計量・条件分岐）でデータ分析を体験する**探究学習教材。
 
-> **スコープの原則（Ver.1.0）**：このリポジトリの現行実装（第2章のDS-1〜3）は、以下の3つに固定する。
-> 追加のデータセット（LOLA・LAMP・LEND・生の衛星画像 等）は、Ver.1.0の範囲には含めない。
->
-> **Ver.2.1での改訂**：拡張フェーズの要件定義を [docs/requirements_v2.1.md](docs/requirements_v2.1.md) にまとめた。
-> 協議の結果、LOLA由来データの利用を正式に許可し、DS-4〜8を実データで検証・実装済み。
-> DS-4（クレーター深さ）・DS-7（南極日照）の実装には、この検証環境へのPython・7-Zipの
-> 追加インストールが必要だったため、その都度ユーザーの許可を得て導入した
-> （生徒側の実行環境には影響しない。詳細はrequirements_v2.1.md §0.1）。
->
-> **Ver.1.2〜1.3による方針転換**：拡張データセットをまとめて判定したことがVer.2.1で
-> 8データセットまで膨らんだ一因との振り返りを受け、以後は
-> [docs/requirements_v1.2.md](docs/requirements_v1.2.md) /
-> [docs/requirements_v1.3.md](docs/requirements_v1.3.md) に基づき、優先順位をつけて
-> 1つずつ検証・判断する運用に改めた。判定結果：
-> - **`craters_3d.csv`・`lola_polar_illumination.csv`は採用確定**（実データ検証・検算済み）
-> - **`moon_earth_correlation.csv`（DS-8）はコアスコープから完全除外確定（Ver.1.4）**——
->   理由は科学的妥当性に疑義がある仮説を「発見」の形で高校生に提示すべきでない、という
->   判断による。`explore_advanced.ipynb`に実装されていたDS-8のセクション（月齢と地震件数の
->   相関検定）は**全セル削除済み**。`explore.ipynb`の問いのヒントにあった誘導注記も削除済み。
->   CSVファイル自体は`data/`に残すが、どちらのノートブックからも参照しない。
-> - `maria_boundaries.csv`・`moon_ephemeris.csv`・`moon_geology_grid.csv`は
->   **優先度3として未着手**。当初`explore.ipynb`のUIに実装したまま残っていた不整合が
->   発見されたため、**ノートブックのデータセット選択肢からも削除済み**
->   （CSVファイル自体は`data/`に残す。文書上の状態とノートブックの実物は常に一致させる）
->
-> **UI改善（Ver.1.3）**：緯度経度の散布図に月面画像（NASA CGI Moon Kit、パブリックドメイン）を
-> 背景表示。色分け機能を、正式採用済みのデータセットの列（DeepCratersの推定年代、
-> クレーターの深さ÷直径比、Diviner昼夜温度差、LOLA平均日照率）で再構築した。
->
-> **MVP確定（Ver.1.4）**：[docs/requirements_v1.4.md](docs/requirements_v1.4.md)により、
-> データセット構成・機能をここで凍結。追加のデータセット・UI機能は今後の展望として
-> report_v2.pdfに記録し、本教材（MVP）には反映しない。
+- GDAL 等の専門環境は不要。Google Colaboratory で完結する。
+- 東京学芸大学教職大学院のフィールド研究として、附属高校（探究カリキュラム）と
+  東京科学大学 笠井研究室（月科学）の協力を得て開発。
+- 開発の経緯と意思決定は [`docs/requirements_v1.5.md`](docs/requirements_v1.5.md) が最新
+  （v1.0〜v1.4 の履歴も `docs/` に残す）。
 
 ---
 
-## 1. 目的
+## 3層構成
 
-- 前処理済みの公開データのみを使い、Python環境の専門的な構築（GDAL等）を必要としない
-- 生徒に単一の決まった問い（例：「直径と深さの関係」）を一方向に解かせるのではなく、
-  **複数の変数を自由に選び、自分の気になる組み合わせを探索する**形にする
-- 情報Ⅰの範囲（散布図・基本統計量・簡単な条件分岐）を超えない
+教材は「共有の土台」と「二つの届け方」に分かれている。
 
-## 2. 使用するデータセット（3つに固定）
+```
+┌───────────────────────────┬───────────────────────────┐
+│ 層2a  探究講座版            │ 層2b  プチ探究版            │
+│  1〜4限・学年全体・強い足場  │  6〜9月・選択1班・弱い足場   │
+│  手順固定のノートブック＋    │  課題ブリーフ＋チートシート  │
+│  ワークシート＋進行表       │  ＋助言講師メモ＋出発点      │
+│  ゴール：ムーンベース最適地  │  問い・提案は生徒が決める    │
+│  （任意）ステップ6：ML比較  │  自由探索ツール explore     │
+├───────────────────────────┴───────────────────────────┤
+│ 層1  解析ヘルパー  moonkit.py（13関数・各数行・機械学習なし）│
+├───────────────────────────────────────────────────────┤
+│ 層0  共有データ基盤（CSV 5種・座標統一・月面画像）          │
+└───────────────────────────────────────────────────────┘
+```
 
-| # | データセット名 | 提供元 | 得られる情報 | 想定形式 |
-|---|---|---|---|---|
-| 1 | Robbins Lunar Crater Database (2018) | USGS Astrogeology | 緯度・経度・直径・形状（離心率／扁平率）。**深さは含まれない（後述）** | CSV（実測：全量1,296,796件・約238MB。教材用は直径8km以上でフィルタリングし36,377件・約2.8MBに圧縮） |
-| 2 | LRO Diviner 温度データ | UCLA Diviner Team（PDS由来データの低解像度ラスタープロダクト。詳細は下記） | 正午の温度・深夜0時の温度・緯度経度・昼夜温度差 | 元は.xyz（ASCII）。全球0.5度グリッド（720×360=259,200点）を1つのCSVに変換済み（約10.2MB） |
-| 3 | DeepCraters Lunar Craters Database (2020) | Figshare (Chen Yang & Renchu Guan) | 推定地質年代（1=Pre-Nectarian 〜 5=Copernican のインデックス） | CSV（実測：18,996件・約0.85MB。件数は報告書記載どおりだが、サイズは報告書記載の約6.47MBではなく約0.85MBだった） |
+| | 層2a 探究講座版 | 層2b プチ探究版 |
+|---|---|---|
+| 足場 | 強い（`# ★ここを変える` の数値だけ書き換え） | 弱い（データと道具のみ） |
+| 時間 | 1〜4限（150〜180分）で完走 | 6/21 導入 → 追究 → 9/27 発信 |
+| 対象 | 1年生 全員 | プチ探究テーマ1を選んだ1グループ |
+| 設計根拠 | 「解析体験」型チュートリアル | 石田(2022) の主体性 |
 
-### 検証結果（着手時に確認済み）
+---
 
-- [x] **DeepCraters**：Figshare (doi: 10.6084/m9.figshare.12768539) の `Aged_Lunar_Crater_Database_DeepCraters_2020(1).csv` を取得。件数は報告書どおり18,996件・6カラム（`Flags_data, ID, Lat, Lon, Diam_km, Age`）。ただしファイルサイズは実測873,823バイト（約0.85MB）で、報告書記載の約6.47MBとは一致しなかった（報告書側の誤記と判断）。経度は-180〜180度。
-- [x] **Diviner**：NASA PDS Geosciences Nodeの正規アーカイブ（GCPプロダクト）は緯度帯ごとに1ファイル約156MB（0.5度×0.25時間ビン、月統計期間分）で、「低解像度」という条件を満たす製品が存在しないことが判明。代わりに、同じDivinerチーム（UCLA、Williams et al. 2017）が公開している**0.5 ppd（0.5度グリッド）の全球ラスタープロダクト**（`diviner_tbol_hour12.xyz`＝正午、`diviner_tbol_hour00.xyz`＝深夜0時、各約7.7MB）を採用し、2ファイルを結合して`diviner_global.csv`を作成した。そのため提供元はPDS Geosciences Nodeそのものではなく、**UCLA Diviner Lunar Radiometer Experimentチームの公開データ**である点に注意（データの取得元がNASA PDSアーカイブの一次データそのものである点は変わらない）。経度は-180〜180度。
-- [x] **Robbins DB**：USGS Astropedia（CKAN経由、PDS4形式のzipアーカイブ、約91.77MB/96,227,201バイト）を取得・展開。実カラムは`CRATER_ID, LAT_CIRC_IMG, LON_CIRC_IMG, LAT_ELLI_IMG, LON_ELLI_IMG, DIAM_CIRC_IMG, ...`など21列で、**深さ（Depth）を表す列は存在しない**。直径8km以上（36,377件）に絞り、`lat, lon, diam_km, diam_major_km, diam_minor_km, eccentricity, ellipticity, rim_arc_fraction`の9列・約2.8MBに整形。経度は元データが0〜360度だったため、-180〜180度に変換した。
-- [x] **座標系の統一**：Robbins DBのみ0〜360度だったため-180〜180度に変換し、3データセットとも-180〜180度に統一した。
-
-### 判明した重要な差分（教材設計への影響）
-
-- **「クレーターの直径と深さの関係」という問いは、この3データセットでは検証できない。** Robbins Lunar Crater Databaseには深さのカラムが無いため。第3章の「問いの例」からは削除し、代わりに「直径と離心率・扁平率（真円度）の関係」を候補にした（`notebooks/explore.ipynb`・`docs/worksheet.pdf`に反映済み）。
-
-## 3. 教材の設計方針
-
-- **単一の設問形式ではなく、探索ツール形式にする**。生徒がX軸・Y軸に使う変数を選べるUI
-  （プルダウンやチェックボックス）を用意し、選んだ組み合わせで散布図が描画される
-- 生徒自身の「気になる」を出発点にするため、最初に予想を書かせる前に、まず自由に触らせる
-  時間を設ける（第4章の「教材の実施形態」を参照）
-- 迷った生徒向けに、以下の「問いの例」をヒントとして選択式で提示する（正解として提示しない）
-
-### 問いの例（ヒントとして提示する候補）
-
-> 2026-08-27時点：実データ確認の結果、Robbins DBに深さ（Depth）の列が存在しないことが判明した
-> （代わりにVer.2.1でWang & Wu 2021の深さ付きカタログ`craters_3d.csv`を追加し、1番として復活させた）。
-
-1. クレーターの直径と深さの関係（`craters_3d.csv`, Wang & Wu 2021）
-2. クレーターの直径と、離心率・扁平率（＝どれくらい丸いか）の関係（Robbins DB）
-3. クレーターの空間密度（緯度経度分布のかたより）
-4. 緯度と正午の温度の関係
-5. 同一地点の昼夜の温度差（正午と深夜0時の温度差）
-6. クレーターの推定年代と、直径・分布との関係（DeepCraters追加により可能）
-7. 月の南極・北極で太陽光発電に向いた場所を探す（日照率が高く永久影の少ない場所。ただし答え合わせ用の永久影率は自分で閾値を決めた後にのみ表示、Ver.1.3で採用確定）
-
-## 4. リポジトリ構成
+## リポジトリ構成
 
 ```
 repo/
-├── README.md                        このファイル
-├── data/
-│   ├── craters_subset.csv           Robbins DBから直径8km以上を抽出・整形（36,377件・約2.8MB）
-│   ├── diviner_global.csv           Diviner正午/深夜0時温度、全球0.5度グリッド（259,200件・約10.2MB）
-│   ├── deepcraters.csv              DeepCratersの年代付きクレーターデータ（18,996件・約0.85MB）
-│   ├── craters_3d.csv               クレーターの直径・深さ（Wang & Wu 2021、直径10km以上・24,982件・約1.1MB）【採用確定 Ver.1.3】
-│   ├── lola_polar_illumination.csv  月南極・北極の平均日照率・永久影割合、約1kmグリッド（157,922件・約4.4MB）【採用確定 Ver.1.3、絶対値は要注意】
-│   ├── moon_earth_correlation.csv   月齢・理論潮汐力・地震件数、過去5年日次【完全除外確定 Ver.1.4。explore_advanced.ipynbからも削除済み、削除はせず保持】
-│   ├── maria_boundaries.csv         月の海・大洋23件の中心座標（USGS地名辞典）【優先度3・未着手。explore.ipynbのUIからは削除済み】
-│   ├── moon_ephemeris.csv           地球ー月の距離・視直径等、過去5年日次（JPL HORIZONS）【優先度3・未着手。explore.ipynbのUIからは削除済み】
-│   └── moon_geology_grid.csv        月の地質年代・地形区分、1度グリッド（USGS統合地質図、64,800件・約3.1MB）【優先度3・未着手。explore.ipynbのUIからは削除済み】
+├── data/                              層0：共有データ基盤（下表の5種＋保持のみ4種）
 ├── notebooks/
-│   ├── explore.ipynb                標準編（情報Ⅰ範囲、Colab起動を主に想定。背景に月面画像を表示）
-│   ├── explore_advanced.ipynb       発展編（numpy.polyfitによるべき乗則フィットのみ。DS-8はVer.1.4で完全削除）
-│   └── assets/
-│       ├── NotoSansJP-Regular.ttf   グラフの日本語表示用フォント（同梱、Ver.2.1で追加）
-│       └── lroc_color_2k.jpg        月面画像（NASA CGI Moon Kit、正距円筒図法、Ver.1.3で追加）
+│   ├── moonkit.py                     層1：解析ヘルパー（機械学習なし）
+│   ├── moonkit_ml.py                  任意ステップ6：モデル比較（scikit-learn）
+│   ├── course_moonbase.ipynb          層2a：探究講座（ステップ1〜5）
+│   ├── course_moonbase_ml.ipynb       任意ステップ6のノートブック
+│   ├── petit_inquiry_start.ipynb      層2b：プチ探究の最小の出発点
+│   ├── explore.ipynb                  自由探索ツール（変数選択式の散布図）
+│   ├── explore_advanced.ipynb         発展編（numpy.polyfit のべき乗則フィット）
+│   └── assets/                        日本語フォント・月面背景画像
 ├── docs/
-│   ├── worksheet.pdf                紙のワークシート（予想を書く欄・考察欄）
-│   ├── requirements_v2.1.md         拡張版の要件定義書（データ検証結果を含む）
-│   ├── requirements_v1.2.md         方針転換後の要件定義書（1件ずつ検証する運用、開発者本人による原文）
-│   ├── requirements_v1.3.md         優先度1・2の検証結果（採用確定）、開発者本人による原文
-│   └── requirements_v1.4.md         MVP確定版（DS-8完全削除、スコープ凍結）、開発者本人による原文
-├── requirements.txt                 ローカル実行用
-├── run_notebook.bat                 ローカルでJupyterを起動する補助スクリプト（Windows）
-└── .gitignore
+│   ├── requirements_v1.5.md           最新の要件定義（3層構成・機械学習の限定解禁）
+│   ├── requirements_v1.2〜1.4.md       履歴
+│   ├── requirements_v2.1.md           データ検証の技術記録
+│   ├── worksheet_course.html / .pdf   層2a：生徒用ワークシート
+│   ├── teacher_guide_course.md        層2a：教員用進行表
+│   ├── petit_inquiry_brief.md         層2b：課題ブリーフ
+│   ├── petit_inquiry_helpersheet.html / .pdf   層2b：ヘルパー チートシート
+│   ├── petit_inquiry_mentor_notes.md  層2b：助言講師用メモ
+│   ├── worksheet.pdf                  旧・自由探索用ワークシート
+│   └── report_v2.html / .pdf          フィールド研究報告書
+├── requirements.txt                   ローカル実行用
+└── run_notebook.bat                   ローカルで Jupyter を起動（Windows）
 ```
 
-上記は着手時点（2026-08-27、Ver.1.2反映は2026-08-28）で実際に構築済みの状態。
+---
 
-## 5. 実行環境
+## 使い方
 
-- 主：Google Colaboratory（「Open in Colab」ボタンでブラウザのみで起動）
-- 従：ローカル環境（Jupyter／VSCode、`requirements.txt`で環境構築）
-- 変数選択のUIは `ipywidgets` を使用し、コードを直接書かなくても操作できるようにする
+- **主：Google Colaboratory**。ノートブックの「Open in Colab」から起動し、冒頭セルで
+  リポジトリを `git clone` する（`data/` と `notebooks/` が一緒に来る）。追加インストール不要。
+- **従：ローカル**（Jupyter / VSCode）。`pip install -r requirements.txt`。
 
-### 実機テストで判明した問題と対処
+どのノートブックでも、最初に `from moonkit import *` を実行してから使う。
+ヘルパーの一覧は [`docs/petit_inquiry_helpersheet.pdf`](docs/petit_inquiry_helpersheet.pdf) を参照。
 
-- **日本語文字化け**：ローカルのJupyter（Windows）で実際にグラフを描画したところ、
-  matplotlibの既定フォントに日本語グリフが無く、軸ラベル等が文字化けする現象を確認した。
-  `japanize-matplotlib`（定番の対処パッケージ）はPython 3.12で`distutils`廃止により
-  動作しないことが判明したため、追加パッケージ無しで解決できる方法として、
-  Noto Sans JPフォントファイルを`notebooks/assets/`に同梱し、ノートブック内で
-  `matplotlib.font_manager`から直接読み込む方式に変更した（Colab・ローカルどちらでも動作）。
+---
 
-## 6. 学習指導要領との対応（概要）
+## データセット（層0・5種）
 
-- 情報Ⅰ：(4)データの収集・整理・分析／(3)モデル化とシミュレーション
-- 地学基礎：(2)変動する地球　宇宙、太陽系と地球の誕生
+| `load()` キー | 内容 | 出典 |
+|---|---|---|
+| `'クレーター'` | 緯度経度・直径・形（離心率・扁平率）。36,377個（直径8km以上） | Robbins Lunar Crater Database, USGS [3] |
+| `'クレーター深さ'` | 直径・深さ・深さ÷直径比。24,982個（直径10km以上） | Wang & Wu 2021 [4] |
+| `'クレーター年代'` | 推定地質年代（1〜5）。18,996個 | DeepCraters, figshare [5] |
+| `'温度'` | 地点ごとの現地時間0〜23時の温度カーブ。259,200地点（全球0.5度） | LRO Diviner, UCLA [6] |
+| `'極域日照'` | 平均日照率・永久影率。157,922地点（南北緯82.96〜90度） | LOLA, Mazarico et al. 2011 [7] |
 
-## 7. 明示的にスコープ外とするもの
+**データの注意（教材に明記）**
+- 温度カーブが信頼できるのは概ね **緯度 ±70度より低い**範囲（極付近は「昼夜」が成立しない）。
+- 日照率の絶対値（○○%）は他文献と単純比較しない。「暗い／明るい」の順序のみ信頼する。
+- `moon_earth_correlation.csv` / `maria_boundaries.csv` / `moon_ephemeris.csv` /
+  `moon_geology_grid.csv` は `data/` に残すが、教材からは参照しない
+  （経緯は `docs/requirements_v1.4.md` §9）。
 
-- Ver.1.0時点：LOLA・LAMP・LEND等、他のLRO搭載機器のデータ（Ver.2.1でLOLAのみ許可に改訂、[docs/requirements_v2.1.md](docs/requirements_v2.1.md)参照）
-- LAMP・LENDのデータ（Ver.2.1でも引き続きスコープ外）
-- 生の衛星画像（GeoTIFF等）そのものの直接表示・処理（前処理済みラスタ→グリッドCSV化までは許容）
-- 外部APIへのライブ接続、バックエンドサーバーの構築・運用（事前に1回だけ取得した静的CSVとして配布する）
-- 機械学習・AIによる予測（今後の展望として報告書にのみ記述し、本教材には実装しない）
+---
 
-## 8. 今後の展望（本教材には含まないが、報告書に記述する内容）
+## 学習指導要領との対応
 
-- Ver.2.1で拡張予定のデータセット（クレーター深さ・マリア分布・天体暦・極域日照・月齢×地球環境）の
-  詳細は [docs/requirements_v2.1.md](docs/requirements_v2.1.md) を参照
-- 修士研究（TSUKIMIのñ(T)データ、PINNs）との接続による発展的な教材化
+- 情報Ⅰ：(4) データの収集・整理・分析／(3) モデル化とシミュレーション
+- 地学基礎：(2) 変動する地球　宇宙、太陽系と地球の誕生
+- 任意ステップ6（機械学習の比較）は情報Ⅱの先取り・発展に位置づける。
+
+## 明示的にスコープ外とするもの
+
+- 生の衛星画像（GeoTIFF 等）の直接処理、GIS 操作（前処理済みグリッド CSV までは許容）
+- 外部 API へのライブ接続、バックエンドサーバー
+- KNIME・自作 Web アプリ・PCA/K-means 等による自動分類（「今後の展望」に記載）
+- 機械学習は層2a の任意ステップ6（`moonkit_ml.py`）に限る。層1 は機械学習を含まない。
+
+---
+
+## 出典
+
+1. 文部科学省, 高等学校学習指導要領（平成30年告示）解説 情報編 (2018)。探究学習の動向に関する調査は本研究のフィールド研究として実施。
+2. 石田光宏, 高等学校「課題探究型授業」における天文分野の調査結果, 天文教育 34(2) (2022)。
+3. Robbins, S. J., *A New Global Database of Lunar Impact Craters*, JGR Planets, 124 (2019)。
+4. Wang, Y., Wu, B., *An improved global catalog of lunar impact craters (≥1 km) with 3D morphometric information*, JGR Planets, 126 (2021)。Zenodo: 10.5281/zenodo.4983248 (CC BY 4.0)。
+5. Yang, C., Guan, R. ほか, *CE_DeepCraters* (Aged Lunar Crater Database), figshare (2020)。10.6084/m9.figshare.12768539 (CC BY 4.0)。
+6. Williams, J.-P. ほか, *The global surface temperatures of the Moon as measured by the Diviner Lunar Radiometer Experiment*, Icarus, 283, 300–325 (2017)。データ配布：UCLA Diviner チーム（瞬間温度マップ24枚を現地時間に位相合わせして利用）。
+7. Mazarico, E. ほか, *Illumination conditions of the lunar polar regions using LOLA topography*, Icarus, 211 (2011)。データ配布：LRO LOLA Team (NASA GSFC)。
+8. NASA Scientific Visualization Studio, *CGI Moon Kit*（散布図の背景画像、パブリックドメイン）。

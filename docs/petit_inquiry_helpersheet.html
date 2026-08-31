@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>moonkit ヘルパー チートシート</title>
+<style>
+  * { box-sizing: border-box; }
+  html { font-family: "Yu Gothic", "Hiragino Kaku Gothic ProN", "Noto Sans JP", sans-serif;
+         color: #1a1a1a; font-size: 9.5pt; line-height: 1.5; }
+  body { margin: 0; }
+  h1 { font-size: 16pt; margin: 0 0 1mm; border-bottom: 2px solid #1a2f4b; padding-bottom: 1.5mm; }
+  h2 { font-size: 11pt; background: #1a2f4b; color: #fff; padding: 1.5mm 2.5mm; margin: 4mm 0 2mm;
+       border-radius: 2px; }
+  .sub { color: #555; font-size: 9pt; margin: 0 0 3mm; }
+  table { border-collapse: collapse; width: 100%; margin: 1mm 0 3mm; }
+  th, td { border: 1px solid #bbb; padding: 1.3mm 2mm; text-align: left; vertical-align: top; }
+  th { background: #eef1f6; }
+  code, kbd { font-family: "Consolas", "Courier New", monospace; font-size: 9pt;
+              background: #f2f2f4; padding: 0 1px; border-radius: 2px; }
+  td.ex { white-space: nowrap; font-family: "Consolas", monospace; font-size: 8.5pt; }
+  .note { background: #fff6e9; border: 1px solid #e8c98f; border-radius: 2px; padding: 2mm 3mm; margin: 2mm 0; }
+  .cols { column-count: 2; column-gap: 6mm; }
+  .pb { page-break-before: always; }
+  @page { size: A4; margin: 12mm 11mm; }
+</style>
+</head>
+<body>
+
+<h1>moonkit ヘルパー チートシート</h1>
+<p class="sub">プチ探究用。Colab のセルの最初で <code>from moonkit import *</code> を実行してから使う。</p>
+
+<h2>データを読み込む</h2>
+<table>
+  <tr><th style="width:52mm">書き方</th><th>返ってくるもの</th></tr>
+  <tr><td class="ex">df = load('クレーター')</td><td>選んだデータセットの表（DataFrame）。キーは
+    <code>'クレーター' / 'クレーター深さ' / 'クレーター年代' / '温度' / '極域日照'</code></td></tr>
+  <tr><td class="ex">df.head()</td><td>最初の5行を見る</td></tr>
+  <tr><td class="ex">df.columns</td><td>列の名前の一覧</td></tr>
+  <tr><td class="ex">df.describe()</td><td>各列の平均・最小・最大など</td></tr>
+</table>
+
+<h2>しぼり込む</h2>
+<table>
+  <tr><th style="width:62mm">書き方</th><th>意味</th></tr>
+  <tr><td class="ex">region(df, lat=(-10, 10))</td><td>緯度 −10〜10度だけ</td></tr>
+  <tr><td class="ex">region(df, lat=(60, 90), lon=(-30, 30))</td><td>緯度と経度の四角い範囲</td></tr>
+  <tr><td class="ex">south_pole(df)</td><td>南緯80度より南</td></tr>
+  <tr><td class="ex">north_pole(df)</td><td>北緯80度より北</td></tr>
+  <tr><td class="ex">df[df['diam_km'] &gt;= 50]</td><td>ある列が条件を満たす行だけ（<code>&gt;= &lt;= == </code>）</td></tr>
+  <tr><td class="ex">classify_by_box(df, {'海': [...], '陸': [...]})</td>
+      <td>緯度経度の箱で <code>区分</code> 列にラベルを付ける。箱は
+        <code>{'lat': (下,上), 'lon': (左,右)}</code>、1ラベルに複数の箱はリストで</td></tr>
+</table>
+
+<h2>数を見る・比べる</h2>
+<table>
+  <tr><th style="width:58mm">書き方</th><th>意味</th></tr>
+  <tr><td class="ex">summary(df, 'diam_km', 'depth_km')</td><td>指定した列の 件数・平均・標準偏差・<b>分散</b>・最小・最大</td></tr>
+  <tr><td class="ex">summary_by(df, group='区分', value='diam_km')</td><td>グループごとに平均・分散などを比べる</td></tr>
+  <tr><td class="ex">grid_count(df, lat_step=10, lon_step=10)</td><td>緯度経度のマスごとの件数（＋ヒートマップ）。クレーター密度に</td></tr>
+</table>
+
+<h2>グラフを描く</h2>
+<table>
+  <tr><th style="width:66mm">書き方</th><th>意味</th></tr>
+  <tr><td class="ex">scatter(df, 'diameter_km', 'depth_km')</td><td>散布図。x・y が <code>lon, lat</code> なら月面画像を背景に</td></tr>
+  <tr><td class="ex">scatter(df, 'lon', 'lat', color='diam_km')</td><td>点を別の列で色分け</td></tr>
+  <tr><td class="ex">scatter(df, 'x', 'y', logx=True, logy=True)</td><td>対数目盛り（0以下があると使えない）</td></tr>
+  <tr><td class="ex">hist(df, 'average_illumination_percent', vline=5)</td><td>ヒストグラム。<code>vline</code> でしきい値の線</td></tr>
+</table>
+
+<div class="pb"></div>
+
+<h2>温度の1日の変化（'温度' データ専用）</h2>
+<table>
+  <tr><th style="width:56mm">書き方</th><th>意味</th></tr>
+  <tr><td class="ex">diurnal_curve(region(load('温度'), lat=(-5, 5)))</td>
+      <td>その範囲の、現地時間0〜23時の平均温度カーブを描く</td></tr>
+  <tr><td class="ex">daily_swing(df)</td>
+      <td>各地点に <code>t_mean_K</code>（1日の平均）・<code>t_swing_K</code>（1日の温度差）・
+        <code>t_std_K</code>（ばらつき）の列を足す</td></tr>
+</table>
+
+<h2>データをつなぐ・点数をつける</h2>
+<table>
+  <tr><th style="width:70mm">書き方</th><th>意味</th></tr>
+  <tr><td class="ex">join_grid(左df, 右df, ['t_swing_K'])</td>
+      <td>粒度のちがう2データセットを緯度経度のマスでつなぐ（例：極域日照に温度差をくっつける）</td></tr>
+  <tr><td class="ex">site_score(df, {'日照率の列': ('高い', 2),<br>&nbsp;&nbsp;'永久影率の列': ('低い', 1)}, top=10)</td>
+      <td>複数の列を0〜1に直して重み付き平均。<code>スコア</code> 列がついて、点数の高い順に返る。
+        <code>('高い'/'低い', 重み)</code></td></tr>
+</table>
+
+<h2>もう一つの道具：自由探索ツール</h2>
+<p class="sub"><code>notebooks/explore.ipynb</code> … コードを書かずに、プルダウンで
+データセット・X軸・Y軸・色分けを選んで散布図を見比べる。「どの組み合わせが面白いか」を
+まず手で探したいときに使う。見つけた関係を、上のヘルパーでくわしく調べる。</p>
+
+<div class="note">
+<b>よくある詰まり</b><br>
+・列名の大文字小文字：<code>'クレーター年代'</code> だけ <code>Lat / Lon / Diam_km</code> と大文字。他は小文字。<br>
+・対数グラフのエラー：その列に 0 以下の値がある。<code>df[df['列'] &gt; 0]</code> でしぼってから。<br>
+・<code>site_score</code> の結果に <code>_norm_...</code> 列が出る：各条件を0〜1に直した値。気にしなくてよい。<br>
+・温度の <code>t_swing_K</code> などが出ない：先に <code>daily_swing(df)</code> を通す必要がある。
+</div>
+
+<h2>各データの列（何が入っているか）</h2>
+<table>
+  <tr><th>データ</th><th>列</th></tr>
+  <tr><td>クレーター</td><td class="ex">lat, lon, diam_km, diam_major_km, diam_minor_km, eccentricity, ellipticity, rim_arc_fraction</td></tr>
+  <tr><td>クレーター深さ</td><td class="ex">lat, lon, diameter_km, depth_km, depth_diameter_ratio</td></tr>
+  <tr><td>クレーター年代</td><td class="ex">Lat, Lon, Diam_km, Age (1〜5), Age_name</td></tr>
+  <tr><td>温度</td><td class="ex">lat, lon, temp_noon_K, temp_midnight_K, temp_diff_K, t_lt00 … t_lt23</td></tr>
+  <tr><td>極域日照</td><td class="ex">lat, lon, average_illumination_percent, permanent_shadow_fraction</td></tr>
+</table>
+
+</body>
+</html>

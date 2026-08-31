@@ -12,3 +12,6 @@ jupyterlab>=4.0
 # 発展編（explore_advanced.ipynb）のみで使用
 scipy>=1.11
 seaborn>=0.13
+
+# 探究講座の任意ステップ6（course_moonbase_ml.ipynb / moonkit_ml.py）のみで使用
+scikit-learn>=1.3
