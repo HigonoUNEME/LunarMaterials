@@ -1,0 +1,61 @@
+name: Deploy web app (JupyterLite) to GitHub Pages
+
+on:
+  push:
+    branches: [main, master]
+    paths:
+      - "notebooks/**"
+      - "data/**"
+      - "webapp/**"
+      - ".github/workflows/deploy-pages.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install JupyterLite
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install "jupyterlite-core==0.8.*" "jupyterlite-pyodide-kernel==0.8.*" jupyterlab nbformat
+
+      - name: Assemble teaching material
+        run: python webapp/assemble.py
+
+      - name: Build JupyterLite site
+        run: |
+          jupyter lite build \
+            --contents webapp/content \
+            --output-dir webapp/_output
+
+      - name: Use custom landing page
+        run: cp webapp/index.html webapp/_output/index.html
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: webapp/_output
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

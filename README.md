@@ -3,12 +3,18 @@
 高校生が、月の公開データ（クレーター・温度・極域日照）を使って
 **情報Ⅰの範囲（散布図・基本統計量・条件分岐）でデータ分析を体験する**探究学習教材。
 
-- GDAL 等の専門環境は不要。Google Colaboratory で完結する。
+## ▶ ブラウザで開く（インストール不要）
+
+**https://\<ユーザー名\>.github.io/\<リポジトリ名\>/**
+
+Python もデータもブラウザ内で動く（JupyterLite / Pyodide）。初回だけ 1〜2 分かかる。
+重い計算をしたいときは Colab / ローカルでも同じノートブックが動く（下記）。
+
+- GDAL 等の専門環境は不要。
 - 東京学芸大学教職大学院のフィールド研究として、附属高校（探究カリキュラム）と
   東京科学大学 笠井研究室（月科学）の協力を得て開発。
-- 開発の経緯と意思決定は [`docs/requirements_v1.5.md`](docs/requirements_v1.5.md)（3層構成）と
-  [`docs/requirements_v1.6.md`](docs/requirements_v1.6.md)（模擬授業前の弱点対処）が最新
-  （v1.0〜v1.4 の履歴も `docs/` に残す）。
+- 開発の経緯と意思決定は `docs/requirements_v1.5.md`（3層構成）／`v1.6.md`（弱点対処）／
+  `v1.7.md`（Web アプリ化）が最新（v1.0〜v1.4 の履歴も `docs/` に残す）。
 
 ---
 
@@ -57,6 +63,7 @@ repo/
 ├── docs/
 │   ├── requirements_v1.5.md           要件定義（3層構成・機械学習の限定解禁）
 │   ├── requirements_v1.6.md           要件定義（模擬授業前の弱点対処）
+│   ├── requirements_v1.7.md           要件定義（Web アプリ化）
 │   ├── requirements_v1.2〜1.4.md       履歴
 │   ├── requirements_v2.1.md           データ検証の技術記録
 │   ├── worksheet_course.html / .pdf   層2a：生徒用ワークシート
@@ -66,6 +73,11 @@ repo/
 │   ├── petit_inquiry_mentor_notes.md  層2b：助言講師用メモ
 │   ├── worksheet.pdf                  旧・自由探索用ワークシート
 │   └── report_v2.html / .pdf          フィールド研究報告書
+├── webapp/                            ブラウザ版（JupyterLite）の組み立てスクリプト
+│   ├── assemble.py                    notebooks+data+assets → 配布用 content/
+│   ├── bootstrap_template.py          各ノートブックに足す「準備」セル
+│   └── index.html                     トップページ
+├── .github/workflows/deploy-pages.yml push のたびに GitHub Pages にデプロイ
 ├── requirements.txt                   ローカル実行用
 └── run_notebook.bat                   ローカルで Jupyter を起動（Windows）
 ```
@@ -74,9 +86,10 @@ repo/
 
 ## 使い方
 
-- **主：Google Colaboratory**。ノートブックの「Open in Colab」から起動し、冒頭セルで
+- **主：ブラウザ**（上記の GitHub Pages URL）。インストール不要。`webapp/README.md` 参照。
+- **従1：Google Colaboratory**。ノートブックの「Open in Colab」から起動し、冒頭セルで
   リポジトリを `git clone` する（`data/` と `notebooks/` が一緒に来る）。追加インストール不要。
-- **従：ローカル**（Jupyter / VSCode）。`pip install -r requirements.txt`。
+- **従2：ローカル**（Jupyter / VSCode）。`pip install -r requirements.txt`。
 
 どのノートブックでも、最初に `from moonkit import *` を実行してから使う。
 ヘルパーの一覧は [`docs/petit_inquiry_helpersheet.pdf`](docs/petit_inquiry_helpersheet.pdf) を参照。

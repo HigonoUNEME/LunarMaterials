@@ -2,3 +2,8 @@
 __pycache__/
 *.pyc
 .DS_Store
+.jupyterlite.doit.db
+
+# webapp: 生成物（GitHub Actions がビルドする）
+webapp/content/
+webapp/_output/
