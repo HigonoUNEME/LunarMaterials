@@ -9,8 +9,9 @@ ipywidgets>=8.0
 notebook>=7.0
 jupyterlab>=4.0
 
-# 発展編（explore_advanced.ipynb）のみで使用
+# 発展編（explore_advanced.ipynb）と、moonkit.py の dist_to_permanent_shadow（最近傍探索）で使用
 scipy>=1.11
+# 発展編のみで使用
 seaborn>=0.13
 
 # 探究講座の任意ステップ6（course_moonbase_ml.ipynb / moonkit_ml.py）のみで使用

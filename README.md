@@ -6,7 +6,8 @@
 - GDAL 等の専門環境は不要。Google Colaboratory で完結する。
 - 東京学芸大学教職大学院のフィールド研究として、附属高校（探究カリキュラム）と
   東京科学大学 笠井研究室（月科学）の協力を得て開発。
-- 開発の経緯と意思決定は [`docs/requirements_v1.5.md`](docs/requirements_v1.5.md) が最新
+- 開発の経緯と意思決定は [`docs/requirements_v1.5.md`](docs/requirements_v1.5.md)（3層構成）と
+  [`docs/requirements_v1.6.md`](docs/requirements_v1.6.md)（模擬授業前の弱点対処）が最新
   （v1.0〜v1.4 の履歴も `docs/` に残す）。
 
 ---
@@ -24,7 +25,7 @@
 │  ゴール：ムーンベース最適地  │  問い・提案は生徒が決める    │
 │  （任意）ステップ6：ML比較  │  自由探索ツール explore     │
 ├───────────────────────────┴───────────────────────────┤
-│ 層1  解析ヘルパー  moonkit.py（13関数・各数行・機械学習なし）│
+│ 層1  解析ヘルパー  moonkit.py（十数個の関数・各数行・機械学習なし）│
 ├───────────────────────────────────────────────────────┤
 │ 層0  共有データ基盤（CSV 5種・座標統一・月面画像）          │
 └───────────────────────────────────────────────────────┘
@@ -54,7 +55,8 @@ repo/
 │   ├── explore_advanced.ipynb         発展編（numpy.polyfit のべき乗則フィット）
 │   └── assets/                        日本語フォント・月面背景画像
 ├── docs/
-│   ├── requirements_v1.5.md           最新の要件定義（3層構成・機械学習の限定解禁）
+│   ├── requirements_v1.5.md           要件定義（3層構成・機械学習の限定解禁）
+│   ├── requirements_v1.6.md           要件定義（模擬授業前の弱点対処）
 │   ├── requirements_v1.2〜1.4.md       履歴
 │   ├── requirements_v2.1.md           データ検証の技術記録
 │   ├── worksheet_course.html / .pdf   層2a：生徒用ワークシート
@@ -90,13 +92,14 @@ repo/
 | `'クレーター年代'` | 推定地質年代（1〜5）。18,996個 | DeepCraters, figshare [5] |
 | `'温度'` | 地点ごとの現地時間0〜23時の温度カーブ。259,200地点（全球0.5度） | LRO Diviner, UCLA [6] |
 | `'極域日照'` | 平均日照率・永久影率。157,922地点（南北緯82.96〜90度） | LOLA, Mazarico et al. 2011 [7] |
+| （`maria_boundaries.csv`） | 23の海・大洋の中心座標と半径。**ステップ2の `near_maria` 分類にのみ使用**（`load()` の選択肢には出さない） | USGS 地名辞典 |
 
 **データの注意（教材に明記）**
 - 温度カーブが信頼できるのは概ね **緯度 ±70度より低い**範囲（極付近は「昼夜」が成立しない）。
+  極域の基地判断は温度ではなく LOLA の日照データで行う（要件 `docs/requirements_v1.6.md` §2）。
 - 日照率の絶対値（○○%）は他文献と単純比較しない。「暗い／明るい」の順序のみ信頼する。
-- `moon_earth_correlation.csv` / `maria_boundaries.csv` / `moon_ephemeris.csv` /
-  `moon_geology_grid.csv` は `data/` に残すが、教材からは参照しない
-  （経緯は `docs/requirements_v1.4.md` §9）。
+- `moon_earth_correlation.csv` / `moon_ephemeris.csv` / `moon_geology_grid.csv` は
+  `data/` に残すが、教材からは参照しない（経緯は `docs/requirements_v1.4.md` §9）。
 
 ---
 

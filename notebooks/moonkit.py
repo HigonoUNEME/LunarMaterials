@@ -33,6 +33,7 @@ import matplotlib.font_manager as fm
 __all__ = [
     'load', 'DATASETS', 'LT_COLS',
     'region', 'south_pole', 'north_pole', 'classify_by_box', 'join_grid',
+    'near_maria', 'dist_to_permanent_shadow',
     'summary', 'summary_by', 'grid_count',
     'scatter', 'hist', 'site_score',
     'diurnal_curve', 'daily_swing',
@@ -40,6 +41,8 @@ __all__ = [
 
 # Diviner の現地時間 0〜23時の温度列
 LT_COLS = [f't_lt{h:02d}' for h in range(24)]
+
+_R_MOON_KM = 1737.4  # 月の半径
 
 # --------------------------------------------------------------------------
 # ファイルの場所を探す（Colab／ローカル、カレントが repo 直下でも notebooks/ でも動くように）
@@ -187,6 +190,67 @@ def join_grid(left, right, value_cols, step=0.5):
     agg = right.assign(_gk=key_r).groupby('_gk')[value_cols].mean()
     key_l = list(zip(np.floor(left[lla] / step) * step, np.floor(left[llo] / step) * step))
     return left.assign(_gk=key_l).join(agg, on='_gk').drop(columns='_gk')
+
+
+def _greatcircle_km(lat1, lon1, lat2, lon2):
+    """月面上の2点間の距離 [km]（大円距離）。lat1/lon1 は配列、lat2/lon2 はスカラーでよい。"""
+    p1, p2 = np.radians(lat1), np.radians(lat2)
+    dl = np.radians(np.asarray(lon2) - np.asarray(lon1))
+    a = np.sin((p2 - p1) / 2) ** 2 + np.cos(p1) * np.cos(p2) * np.sin(dl / 2) ** 2
+    return _R_MOON_KM * 2 * np.arcsin(np.sqrt(np.clip(a, 0, 1)))
+
+
+def near_maria(df, scale=0.8, colname='区分'):
+    """各地点が「月の海（マリア）」の中でどうかを判定して `海`/`陸` のラベル列を足す。
+
+    USGS 地名辞典の23の海・大洋の中心座標と半径（`data/maria_boundaries.csv`）を使う。
+    ある海の中心から (その海の半径 × scale) km 以内なら『海』。scale を下げると中心部だけになる。
+
+        c = near_maria(load('クレーター'), scale=0.8)
+        summary_by(c, group='区分', value='diam_km')
+    """
+    path = _find('data', 'maria_boundaries.csv')
+    if path is None:
+        raise FileNotFoundError('maria_boundaries.csv')
+    maria = pd.read_csv(path)
+    lat_c, lon_c = _latlon_cols(df)
+    lat = df[lat_c].to_numpy()
+    lon = df[lon_c].to_numpy()
+    inside = np.zeros(len(df), dtype=bool)
+    for _, m in maria.iterrows():
+        inside |= _greatcircle_km(lat, lon, m['center_lat'], m['center_lon']) <= m['radius_km'] * scale
+    out = df.copy()
+    out[colname] = np.where(inside, '海', '陸')
+    return out
+
+
+def dist_to_permanent_shadow(df, threshold=0.9, colname='km_to_shadow'):
+    """各地点から、いちばん近い永久影までの「おおよその距離」[km] を `km_to_shadow` 列として足す。
+
+    永久影＝`permanent_shadow_fraction >= threshold` の地点。極付近を平面に近似し、
+    最近傍探索（scipy.spatial.cKDTree）で距離を求める。'極域日照' データに対して使う。
+
+        極 = dist_to_permanent_shadow(south_pole(load('極域日照')))
+    """
+    from scipy.spatial import cKDTree
+
+    lat_c, lon_c = _latlon_cols(df)
+    lat = df[lat_c].to_numpy()
+    lon = df[lon_c].to_numpy()
+    # 極からの角距離 r[deg] と経度 theta で平面座標に（1度 ≒ π/180 × 月半径 km）
+    deg_km = np.radians(1.0) * _R_MOON_KM
+    r = (90.0 - np.abs(lat)) * deg_km
+    th = np.radians(lon)
+    x, y = r * np.cos(th), r * np.sin(th)
+
+    is_psr = df['permanent_shadow_fraction'].to_numpy() >= threshold
+    if not is_psr.any():
+        raise ValueError(f'permanent_shadow_fraction >= {threshold} の地点がありません')
+    tree = cKDTree(np.c_[x[is_psr], y[is_psr]])
+    d, _ = tree.query(np.c_[x, y], k=1)
+    out = df.copy()
+    out[colname] = d
+    return out
 
 
 # --------------------------------------------------------------------------
