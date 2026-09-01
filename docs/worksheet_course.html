@@ -50,7 +50,7 @@
   <tr><th style="width:8mm"></th><th style="width:42mm">ミッション</th><th>基地に必要なこと</th></tr>
   <tr><td class="check">☐</td><td>☀️ 太陽光発電基地</td><td>一年中よく日が当たること（発電したい）</td></tr>
   <tr><td class="check">☐</td><td>🧊 氷採掘基地</td><td>氷がありそうなこと（＝ずっと日が当たらない「永久影」）</td></tr>
-  <tr><td class="check">☐</td><td>🏠 有人基地（人が住む）</td><td>電力も使えて、かつ1日の温度変化がおだやかなこと</td></tr>
+  <tr><td class="check">☐</td><td>🏠 有人基地（人が住む）</td><td>電力が使えて、かつ氷（永久影）のすぐ近くにあること</td></tr>
 </table>
 
 <div class="band">ステップ1<span class="step">月の温度は1日でどれくらい変わる？</span></div>
@@ -64,22 +64,26 @@
 </table>
 <b>気づいたこと</b>：なぜこんなに差が大きい？　温度カーブの形（朝の上がり方と夕方〜夜の下がり方）は左右対称？
 <div class="box"></div>
+<b>このデータはどこまで信じられる？</b>　<code>my_band</code> を <code>(-90,-80)</code>（南極のあたり）にしたとき、カーブと温度差はどうなった？　なぜだと思う？
+<div class="box sm"></div>
 
 <div class="band">ステップ2<span class="step">月の「海」と「陸」で何が違う？</span></div>
-<p class="hint">黒く平らな「海（マリア）」と、白くでこぼこの「陸（高地）」。</p>
-<b>予想</b>：海と陸、どちらがクレーターが多い？
+<p class="hint">まずクレーターの分布から「海」を自分で見つけ、そのあと公式の海の座標で数値化する。</p>
+<b>予想</b>：クレーターの数は月面のどこでも同じくらい？　場所によってかたよる？
 <div class="box sm"></div>
-<b>結果</b>
+<b>結果</b>（<code>my_scale</code> ＝ <span class="fill" style="display:inline-block;width:24mm"></span>）
 <table>
-  <tr><th></th><th>クレーターの数</th><th>直径の平均 [km]</th><th>直径のばらつき（分散）</th></tr>
+  <tr><th></th><th>クレーターの数</th><th>直径の平均 [km]</th><th>推定年代の平均<br>（大きいほど新しい）</th></tr>
   <tr><td>海</td><td style="height:8mm"></td><td></td><td></td></tr>
   <tr><td>陸</td><td></td><td></td><td></td></tr>
 </table>
-<b>気づいたこと</b>：海のほうがクレーターが少ないのはなぜ？
+<b>気づいたこと</b>：海のほうがクレーターが少ないのはなぜ？　「少ない＝新しい」と言えるのはなぜ？
 <div class="box"></div>
+<b>基地との関係</b>：平らで着陸しやすい「若い海」と、氷のある「古い極域高地」。基地はどちらを取る？（ステップ4・5で使う）
+<div class="box sm"></div>
 
 <div class="band">ステップ3<span class="step">月の南極を細かく見る</span></div>
-<p class="hint">南極には「一年中日が当たらない場所（永久影）」と「ほぼずっと日が当たる場所」がとなり合っています。</p>
+<p class="hint">極では温度データが不確かなので、ここからは日照（LOLA）のデータを使う。南極には「一年中日が当たらない場所（永久影）」と「ほぼずっと日が当たる場所」がとなり合っています。</p>
 <b>予想</b>：南極の「平均日照率」のヒストグラムはどんな形になる？
 <div class="box sm"></div>
 <div class="row">
@@ -98,7 +102,7 @@
 <div class="box sm"></div>
 <b>点数が高かった場所（上位）</b>
 <table>
-  <tr><th>順位</th><th>緯度</th><th>経度</th><th>日照率 %</th><th>永久影率</th><th>1日の温度差 K</th><th>スコア</th></tr>
+  <tr><th>順位</th><th>緯度</th><th>経度</th><th>日照率 %</th><th>永久影率</th><th>氷までの距離 km</th><th>スコア</th></tr>
   <tr><td>1</td><td style="height:7mm"></td><td></td><td></td><td></td><td></td><td></td></tr>
   <tr><td>2</td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
   <tr><td>3</td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
@@ -114,11 +118,12 @@
   <tr><td style="height:8mm"></td><td></td><td></td></tr>
 </table>
 <b>わかったこと</b>：同じデータを使っているのに、なぜ班ごとに最適地が違った？
-「月面基地の最適地」に1つの正解はある？
+「月面基地の最適地」に1つの正解はある？　ステップ2の「平らな海」と「氷のある極」のトレードオフはどう効いた？
 <div class="box lg"></div>
 
-<p class="small">データ出典：USGS（Robbins クレーターDB）／UCLA Diviner（Williams et al. 2017）／
-LRO LOLA（Mazarico et al. 2011）。日照率の絶対値は他の文献の数字と単純比較しないこと（相対的な明るさの目安として使う）。</p>
+<p class="small">データ出典：USGS（Robbins クレーターDB・月の海の座標）／UCLA Diviner（Williams et al. 2017）／
+LRO LOLA（Mazarico et al. 2011）。日照率の絶対値は他の文献の数字と単純比較しないこと（相対的な明るさの目安として使う）。
+温度カーブが信頼できるのは緯度 ±70 度より低い範囲。</p>
 
 </body>
 </html>
