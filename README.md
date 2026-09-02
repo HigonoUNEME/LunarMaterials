@@ -11,10 +11,10 @@ Python もデータもブラウザ内で動く（JupyterLite / Pyodide）。初�
 重い計算をしたいときは Colab / ローカルでも同じノートブックが動く（下記）。
 
 - GDAL 等の専門環境は不要。
-- 東京学芸大学教職大学院のフィールド研究として、附属高校（探究カリキュラム）と
-  東京科学大学 笠井研究室（月科学）の協力を得て開発。
-- 開発の経緯と意思決定は `docs/requirements_v1.5.md`（3層構成）／`v1.6.md`（弱点対処）／
-  `v1.7.md`（Web アプリ化）が最新（v1.0〜v1.4 の履歴も `docs/` に残す）。
+- 「総合的な探究の時間」や「情報Ⅰ」で、**データ分析を通した探究**として活用できる。
+  実授業での試行と改善は今後の課題。
+- 開発の経緯と設計判断は `docs/requirements_v1.5.md`（3層構成）／`v1.6.md`（弱点対処）／
+  `v1.7.md`（Web アプリ化）にまとめている（v1.0〜v1.4 の履歴も `docs/` に残す）。
 
 ---
 
@@ -24,10 +24,11 @@ Python もデータもブラウザ内で動く（JupyterLite / Pyodide）。初�
 
 ```
 ┌───────────────────────────┬───────────────────────────┐
-│ 層2a  探究講座版            │ 層2b  プチ探究版            │
-│  1〜4限・学年全体・強い足場  │  6〜9月・選択1班・弱い足場   │
+│ 層2a  ガイド型（探究講座）    │ 層2b  オープン型（プチ探究） │
+│  1コマ完結・クラス全体      │  数週間・選択した班         │
+│  強い足場                  │  弱い足場                  │
 │  手順固定のノートブック＋    │  課題ブリーフ＋チートシート  │
-│  ワークシート＋進行表       │  ＋助言講師メモ＋出発点      │
+│  ワークシート＋進行表       │  ＋指導者メモ＋出発点        │
 │  ゴール：ムーンベース最適地  │  問い・提案は生徒が決める    │
 │  （任意）ステップ6：ML比較  │  自由探索ツール explore     │
 ├───────────────────────────┴───────────────────────────┤
@@ -37,11 +38,11 @@ Python もデータもブラウザ内で動く（JupyterLite / Pyodide）。初�
 └───────────────────────────────────────────────────────┘
 ```
 
-| | 層2a 探究講座版 | 層2b プチ探究版 |
+| | 層2a ガイド型 | 層2b オープン型 |
 |---|---|---|
 | 足場 | 強い（`# ★ここを変える` の数値だけ書き換え） | 弱い（データと道具のみ） |
-| 時間 | 1〜4限（150〜180分）で完走 | 6/21 導入 → 追究 → 9/27 発信 |
-| 対象 | 1年生 全員 | プチ探究テーマ1を選んだ1グループ |
+| 時間 | 1コマ（150〜180分）で完走 | 数回に分けて（導入 → 追究 → 発信） |
+| 対象 | クラス全体 | 選択した少人数のグループ |
 | 設計根拠 | 「解析体験」型チュートリアル | 石田(2022) の主体性 |
 
 ---
@@ -54,9 +55,9 @@ repo/
 ├── notebooks/
 │   ├── moonkit.py                     層1：解析ヘルパー（機械学習なし）
 │   ├── moonkit_ml.py                  任意ステップ6：モデル比較（scikit-learn）
-│   ├── course_moonbase.ipynb          層2a：探究講座（ステップ1〜5）
+│   ├── course_moonbase.ipynb          層2a：ガイド型（ステップ1〜5）
 │   ├── course_moonbase_ml.ipynb       任意ステップ6のノートブック
-│   ├── petit_inquiry_start.ipynb      層2b：プチ探究の最小の出発点
+│   ├── petit_inquiry_start.ipynb      層2b：オープン型の最小の出発点
 │   ├── explore.ipynb                  自由探索ツール（変数選択式の散布図）
 │   ├── explore_advanced.ipynb         発展編（numpy.polyfit のべき乗則フィット）
 │   └── assets/                        日本語フォント・月面背景画像
@@ -67,12 +68,12 @@ repo/
 │   ├── requirements_v1.2〜1.4.md       履歴
 │   ├── requirements_v2.1.md           データ検証の技術記録
 │   ├── worksheet_course.html / .pdf   層2a：生徒用ワークシート
-│   ├── teacher_guide_course.md        層2a：教員用進行表
+│   ├── teacher_guide_course.md        層2a：指導者用の進行表
 │   ├── petit_inquiry_brief.md         層2b：課題ブリーフ
 │   ├── petit_inquiry_helpersheet.html / .pdf   層2b：ヘルパー チートシート
-│   ├── petit_inquiry_mentor_notes.md  層2b：助言講師用メモ
+│   ├── petit_inquiry_mentor_notes.md  層2b：指導者用メモ
 │   ├── worksheet.pdf                  旧・自由探索用ワークシート
-│   └── report_v2.html / .pdf          フィールド研究報告書
+│   └── report_v2.html / .pdf          教材の解説（2ページ）
 ├── webapp/                            ブラウザ版（JupyterLite）の組み立てスクリプト
 │   ├── assemble.py                    notebooks+data+assets → 配布用 content/
 │   ├── bootstrap_template.py          各ノートブックに足す「準備」セル
@@ -125,15 +126,15 @@ repo/
 ## 明示的にスコープ外とするもの
 
 - 生の衛星画像（GeoTIFF 等）の直接処理、GIS 操作（前処理済みグリッド CSV までは許容）
-- 外部 API へのライブ接続、バックエンドサーバー
-- KNIME・自作 Web アプリ・PCA/K-means 等による自動分類（「今後の展望」に記載）
+- 外部 API へのライブ接続、バックエンドサーバー（Web アプリは静的ファイルのみ）
+- KNIME・PCA/K-means 等による自動分類パイプライン（「今後の展望」に記載）
 - 機械学習は層2a の任意ステップ6（`moonkit_ml.py`）に限る。層1 は機械学習を含まない。
 
 ---
 
 ## 出典
 
-1. 文部科学省, 高等学校学習指導要領（平成30年告示）解説 情報編 (2018)。探究学習の動向に関する調査は本研究のフィールド研究として実施。
+1. 文部科学省, 高等学校学習指導要領（平成30年告示）解説 情報編 (2018)。
 2. 石田光宏, 高等学校「課題探究型授業」における天文分野の調査結果, 天文教育 34(2) (2022)。
 3. Robbins, S. J., *A New Global Database of Lunar Impact Craters*, JGR Planets, 124 (2019)。
 4. Wang, Y., Wu, B., *An improved global catalog of lunar impact craters (≥1 km) with 3D morphometric information*, JGR Planets, 126 (2021)。Zenodo: 10.5281/zenodo.4983248 (CC BY 4.0)。
