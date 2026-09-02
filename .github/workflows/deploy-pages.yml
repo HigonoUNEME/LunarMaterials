@@ -43,8 +43,10 @@ jobs:
             --contents webapp/content \
             --output-dir webapp/_output
 
-      - name: Use custom landing page
-        run: cp webapp/index.html webapp/_output/index.html
+      - name: Use custom landing + data pages
+        run: |
+          cp webapp/index.html webapp/_output/index.html
+          cp webapp/data.html  webapp/_output/data.html
 
       - uses: actions/upload-pages-artifact@v3
         with:

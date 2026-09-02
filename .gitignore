@@ -7,3 +7,4 @@ __pycache__/
 # webapp: 生成物（GitHub Actions がビルドする）
 webapp/content/
 webapp/_output/
+webapp/data.html
