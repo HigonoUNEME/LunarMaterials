@@ -228,6 +228,9 @@ export const MoonViewer3D: React.FC<MoonViewer3DProps> = ({
   const [tooltipPos, setTooltipPos] = useState<{ x: number; y: number } | null>(null);
   // クリックして立てたピンの情報（ホバーと違い、マウスを離しても消えない）
   const [pinnedInfo, setPinnedInfo] = useState<HoverInfo | null>(null);
+  // 左下の展開図に出す「今カメラが向いている地点」（月面ローカルの緯度経度）。animate ループから更新
+  const [viewCenter, setViewCenter] = useState<{ lat: number; lon: number }>({ lat: 0, lon: 0 });
+  const viewCenterRef = useRef<{ lat: number; lon: number }>({ lat: 0, lon: 0 });
 
   // settings を animate ループの外（クロージャ）から読むための ref
   const settingsRef = useRef(settings);
@@ -690,6 +693,16 @@ export const MoonViewer3D: React.FC<MoonViewer3DProps> = ({
             setPinnedInfo(updated);
           }
         }
+
+        // 左下の展開図用：今カメラが向いている地点（月面ローカルの緯度経度）。
+        // カメラの位置を moonSpinGroup のローカル座標に戻す＝自転を打ち消した「向き」になる。
+        const camLocal = moonSpinGroup.worldToLocal(camera.position.clone());
+        const vc = vector3ToLatLong(camLocal);
+        const rvc = { lat: Math.round(vc.lat * 10) / 10, lon: Math.round(vc.lon * 10) / 10 };
+        if (rvc.lat !== viewCenterRef.current.lat || rvc.lon !== viewCenterRef.current.lon) {
+          viewCenterRef.current = rvc;
+          setViewCenter(rvc);
+        }
       }
 
       controls.update();
@@ -1084,35 +1097,85 @@ export const MoonViewer3D: React.FC<MoonViewer3DProps> = ({
         </button>
       </div>
 
-      {/* 自転（＝1日の時刻）スライダー＋自転の速さ。太陽の向きは固定で、月を回すことで昼夜が移り変わる */}
-      <div className="absolute bottom-4 left-4 bg-slate-900/85 backdrop-blur-md border border-slate-700/70 px-3.5 py-2.5 rounded-2xl shadow-xl flex items-center gap-3 text-xs text-slate-300 pointer-events-auto">
-        <RotateCw className="w-4 h-4 text-amber-400 shrink-0" />
-        <div className="flex flex-col gap-2">
-          <div className="flex flex-col gap-1">
-            <div className="flex justify-between items-center text-[10px] text-slate-400">
-              <span>月の自転（1日の時刻）</span>
-              <span className="font-mono text-amber-300">{Math.round(settings.moonRotationDeg)}°</span>
-            </div>
-            <input
-              id="slider-moon-rotation"
-              type="range" min="0" max="360" step="5"
-              value={settings.moonRotationDeg}
-              onChange={(e) => onUpdateSettings({ moonRotationDeg: Number(e.target.value) })}
-              className="w-28 sm:w-36 h-1.5 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-amber-400"
-            />
+      {/* 左下：展開図（今の向き・ピンの場所）＋自転スライダー。要望「月球儀が今どこを向いているか、
+          ピンがどこに刺さったか見られるように」への対応 */}
+      <div className="absolute bottom-4 left-4 flex flex-col gap-2 pointer-events-none">
+        <div
+          id="mini-map-card"
+          className="bg-slate-900/85 backdrop-blur-md border border-slate-700/70 p-2 rounded-2xl shadow-xl pointer-events-auto flex flex-col gap-1.5"
+        >
+          <div className="flex items-center gap-1.5 text-[10px] text-slate-400 px-0.5">
+            <Compass className="w-3 h-3 text-cyan-400 shrink-0" />
+            <span>展開図（{'○'}今の向き{pinnedInfo ? '・●ピン' : ''}）</span>
           </div>
-          <div className="flex flex-col gap-1">
-            <div className="flex justify-between items-center text-[10px] text-slate-400">
-              <span>自転の速さ（自動回転中）</span>
-              <span className="font-mono text-amber-300">×{settings.rotationSpeed.toFixed(1)}</span>
-            </div>
-            <input
-              id="slider-rotation-speed"
-              type="range" min="0.1" max="3" step="0.1"
-              value={settings.rotationSpeed}
-              onChange={(e) => onUpdateSettings({ rotationSpeed: Number(e.target.value) })}
-              className="w-28 sm:w-36 h-1.5 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-amber-400"
+          <div
+            id="mini-map"
+            className="relative w-40 sm:w-48 rounded-lg overflow-hidden border border-slate-700/60"
+            style={{ aspectRatio: '2 / 1' }}
+          >
+            {/* 月面テクスチャと同じ正距円筒図法（x=0が経度-180°、y=0が緯度+90°）。
+                いわゆる「メルカトル図法」だと極が無限に伸びて使いにくいので、この投影法にしている。 */}
+            <img
+              src="textures/moon_lroc_color_2k.jpg"
+              alt="月面の展開図（正距円筒図法）"
+              className="absolute inset-0 w-full h-full object-cover"
+              draggable={false}
             />
+            <div
+              id="mini-map-view-marker"
+              className="absolute w-3.5 h-3.5 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-cyan-300"
+              style={{
+                left: `${((viewCenter.lon + 180) / 360) * 100}%`,
+                top: `${((90 - viewCenter.lat) / 180) * 100}%`,
+                boxShadow: '0 0 4px rgba(34,211,238,0.9)'
+              }}
+              title="今カメラが向いている地点"
+            />
+            {pinnedInfo && (
+              <div
+                id="mini-map-pin-marker"
+                className="absolute w-2.5 h-2.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-amber-400 border border-amber-100"
+                style={{
+                  left: `${((pinnedInfo.lon + 180) / 360) * 100}%`,
+                  top: `${((90 - pinnedInfo.lat) / 180) * 100}%`,
+                  boxShadow: '0 0 4px rgba(250,204,21,0.9)'
+                }}
+                title="ピン留めした地点"
+              />
+            )}
+          </div>
+        </div>
+
+        {/* 自転（＝1日の時刻）スライダー＋自転の速さ。太陽の向きは固定で、月を回すことで昼夜が移り変わる */}
+        <div className="bg-slate-900/85 backdrop-blur-md border border-slate-700/70 px-3.5 py-2.5 rounded-2xl shadow-xl flex items-center gap-3 text-xs text-slate-300 pointer-events-auto">
+          <RotateCw className="w-4 h-4 text-amber-400 shrink-0" />
+          <div className="flex flex-col gap-2">
+            <div className="flex flex-col gap-1">
+              <div className="flex justify-between items-center text-[10px] text-slate-400">
+                <span>月の自転（1日の時刻）</span>
+                <span className="font-mono text-amber-300">{Math.round(settings.moonRotationDeg)}°</span>
+              </div>
+              <input
+                id="slider-moon-rotation"
+                type="range" min="0" max="360" step="5"
+                value={settings.moonRotationDeg}
+                onChange={(e) => onUpdateSettings({ moonRotationDeg: Number(e.target.value) })}
+                className="w-28 sm:w-36 h-1.5 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-amber-400"
+              />
+            </div>
+            <div className="flex flex-col gap-1">
+              <div className="flex justify-between items-center text-[10px] text-slate-400">
+                <span>自転の速さ（自動回転中）</span>
+                <span className="font-mono text-amber-300">×{settings.rotationSpeed.toFixed(1)}</span>
+              </div>
+              <input
+                id="slider-rotation-speed"
+                type="range" min="0.1" max="3" step="0.1"
+                value={settings.rotationSpeed}
+                onChange={(e) => onUpdateSettings({ rotationSpeed: Number(e.target.value) })}
+                className="w-28 sm:w-36 h-1.5 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-amber-400"
+              />
+            </div>
           </div>
         </div>
       </div>
