@@ -57,6 +57,16 @@ function nearestDiurnalFrameIndexForRotation(rotationDeg: number): number {
   return (((Math.round((lon + 180) / (360 / n)) % n) + n) % n);
 }
 
+/** 温度系のデータ層は元データがケルビン(K)。高校生にはセルシウス度（℃）のほうが直感的という
+ *  要望への対応で、画面表示だけ℃に変換する（元のCSV・PNGテクスチャ・凡例カラーマップは
+ *  Kのまま。webapp/data.htmlのCSVダウンロードにも影響しない＝「ウェブアプリ上だけ」の変換）。
+ *  「1日の温度差」(temp_amp_K)は絶対温度ではなく差なので、ΔK=Δ℃よりオフセットせず単位だけ変える。 */
+function toCelsiusDisplay(key: string, unit: string, value: number): { value: number; unit: string } {
+  if (unit !== 'K') return { value, unit };
+  const isDelta = key === 'temp_amp_K';
+  return { value: isDelta ? value : value - 273.15, unit: '℃' };
+}
+
 // 常設ピンを廃止し、カーソルを合わせたときだけ「近くの地点」の名前を出す（要望への対応）。
 // これより離れていたら「地点なし」＝緯度経度だけを表示する。
 const FEATURE_HOVER_THRESHOLD_DEG = 3;
@@ -243,12 +253,16 @@ export const MoonViewer3D: React.FC<MoonViewer3DProps> = ({
         ? THREE.MathUtils.radToDeg(moonSpinGroupRef.current.rotation.y)
         : s.moonRotationDeg;
       const v = diurnalValueAt(lookup, lat, lon, subsolarLonLocal(rotationDeg));
-      return v !== null ? { label: DIURNAL.label, unit: DIURNAL.unit, value: v } : null;
+      if (v === null) return null;
+      const disp = toCelsiusDisplay(DIURNAL_KEY, DIURNAL.unit, v);
+      return { label: DIURNAL.label, unit: disp.unit, value: disp.value };
     }
     const v = staticLayerValueAt(s.dataLayerKey, lat, lon);
     if (v === null) return null;
     const layer = DATA_LAYERS.find((l) => l.key === s.dataLayerKey);
-    return layer ? { label: layer.label, unit: layer.unit, value: v } : null;
+    if (!layer) return null;
+    const disp = toCelsiusDisplay(layer.key, layer.unit, v);
+    return { label: layer.label, unit: disp.unit, value: disp.value };
   };
 
   /** 画面座標(clientX/Y)から、月面と交わった点の緯度経度・近くの既知地点・データ層の値をまとめて求める。
@@ -514,9 +528,11 @@ export const MoonViewer3D: React.FC<MoonViewer3DProps> = ({
     // 光源の向き次第で暗く沈んで見えなくなってしまうため、太陽と同じく自ら光って見える
     // MeshBasicMaterial にする（実際のアポロ「地球の出」写真のような、常によく見える地球にする簡略化）。
     let earthTexture: THREE.Texture | null = null;
+    // MeshBasicMaterialのcolorはmapに乗算されるので、地球をもう少し明るくという要望への対応で
+    // 元の 0x6f93c4 より各チャンネルを底上げ（青みがかった色味は保ちつつ、暗く沈みすぎないように）。
     const earthMesh = new THREE.Mesh(
       new THREE.SphereGeometry(EARTH_MESH_R, 48, 48),
-      new THREE.MeshBasicMaterial({ color: 0x6f93c4, toneMapped: false })
+      new THREE.MeshBasicMaterial({ color: 0x8fb3e0, toneMapped: false })
     );
     earthMesh.position.copy(latLongToVector3(0, 0, SKY_R));
     scene.add(earthMesh);
@@ -879,10 +895,14 @@ export const MoonViewer3D: React.FC<MoonViewer3DProps> = ({
   // データ層の凡例に出す値（静的な層／1日のアニメーションのどちらを選んでいるかで出し分け）
   const isDiurnal = settings.dataLayerKey === DIURNAL_KEY;
   const currentLayer = DATA_LAYERS.find((l) => l.key === settings.dataLayerKey);
+  const legendKey = isDiurnal ? DIURNAL_KEY : currentLayer?.key ?? '';
+  const legendRawUnit = isDiurnal ? DIURNAL.unit : currentLayer?.unit ?? '';
+  const legendMinDisp = toCelsiusDisplay(legendKey, legendRawUnit, isDiurnal ? DIURNAL.min : currentLayer?.min ?? 0);
+  const legendMaxDisp = toCelsiusDisplay(legendKey, legendRawUnit, isDiurnal ? DIURNAL.max : currentLayer?.max ?? 0);
   const legendLabel = isDiurnal ? DIURNAL.label : currentLayer?.label ?? '';
-  const legendUnit = isDiurnal ? DIURNAL.unit : currentLayer?.unit ?? '';
-  const legendMin = isDiurnal ? DIURNAL.min : currentLayer?.min ?? 0;
-  const legendMax = isDiurnal ? DIURNAL.max : currentLayer?.max ?? 0;
+  const legendUnit = legendMinDisp.unit;
+  const legendMin = legendUnit === '℃' ? Math.round(legendMinDisp.value) : legendMinDisp.value;
+  const legendMax = legendUnit === '℃' ? Math.round(legendMaxDisp.value) : legendMaxDisp.value;
   const legendDesc = isDiurnal ? DIURNAL.desc : currentLayer?.desc ?? '';
   const legendSource = isDiurnal ? DIURNAL.source : currentLayer?.source ?? '';
   const legendGradient = isDiurnal ? DIURNAL.gradientCss : currentLayer?.gradientCss ?? '';
