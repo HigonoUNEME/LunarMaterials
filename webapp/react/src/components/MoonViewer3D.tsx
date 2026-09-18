@@ -228,9 +228,13 @@ export const MoonViewer3D: React.FC<MoonViewer3DProps> = ({
   const [tooltipPos, setTooltipPos] = useState<{ x: number; y: number } | null>(null);
   // クリックして立てたピンの情報（ホバーと違い、マウスを離しても消えない）
   const [pinnedInfo, setPinnedInfo] = useState<HoverInfo | null>(null);
-  // 左下の展開図に出す「今カメラが向いている地点」（月面ローカルの緯度経度）。animate ループから更新
-  const [viewCenter, setViewCenter] = useState<{ lat: number; lon: number }>({ lat: 0, lon: 0 });
-  const viewCenterRef = useRef<{ lat: number; lon: number }>({ lat: 0, lon: 0 });
+  // 左下の展開図に出す「今カメラが向いている地点」（月面ローカルの緯度経度）＋見えている範囲の半径
+  // （limbDeg。カメラが有限距離にあるので、90°の半球まるごとではなく acos(R/カメラ距離) までしか
+  // 実際には見えない。「青丸1点しか見えていないわけではない」という指摘への対応で、点ではなく
+  // 範囲として展開図に描く）。animate ループから更新。
+  const [viewCenter, setViewCenter] = useState<{ lat: number; lon: number; limbDeg: number }>({ lat: 0, lon: 0, limbDeg: 70 });
+  const viewCenterRef = useRef<{ lat: number; lon: number; limbDeg: number }>({ lat: 0, lon: 0, limbDeg: 70 });
+  const miniMapCanvasRef = useRef<HTMLCanvasElement>(null); // 展開図：見えている範囲を淡く塗る
 
   // settings を animate ループの外（クロージャ）から読むための ref
   const settingsRef = useRef(settings);
@@ -694,12 +698,21 @@ export const MoonViewer3D: React.FC<MoonViewer3DProps> = ({
           }
         }
 
-        // 左下の展開図用：今カメラが向いている地点（月面ローカルの緯度経度）。
-        // カメラの位置を moonSpinGroup のローカル座標に戻す＝自転を打ち消した「向き」になる。
+        // 左下の展開図用：今カメラが向いている地点（月面ローカルの緯度経度）と、
+        // 実際に見えている範囲の半径（limbDeg）。カメラの位置を moonSpinGroup のローカル座標に
+        // 戻す＝自転を打ち消した「向き」になる。limbDeg はカメラが有限距離にあることによる
+        // 見かけの地平線の角度（acos(半径/距離)。近づくほど狭く、離れるほど90°に近づく）。
         const camLocal = moonSpinGroup.worldToLocal(camera.position.clone());
         const vc = vector3ToLatLong(camLocal);
-        const rvc = { lat: Math.round(vc.lat * 10) / 10, lon: Math.round(vc.lon * 10) / 10 };
-        if (rvc.lat !== viewCenterRef.current.lat || rvc.lon !== viewCenterRef.current.lon) {
+        const camDistNow = camera.position.distanceTo(controls.target);
+        const limbDeg = THREE.MathUtils.radToDeg(Math.acos(THREE.MathUtils.clamp(MOON_RADIUS / camDistNow, -1, 1)));
+        const rvc = {
+          lat: Math.round(vc.lat * 10) / 10,
+          lon: Math.round(vc.lon * 10) / 10,
+          limbDeg: Math.round(limbDeg * 10) / 10
+        };
+        if (rvc.lat !== viewCenterRef.current.lat || rvc.lon !== viewCenterRef.current.lon ||
+            rvc.limbDeg !== viewCenterRef.current.limbDeg) {
           viewCenterRef.current = rvc;
           setViewCenter(rvc);
         }
@@ -841,6 +854,50 @@ export const MoonViewer3D: React.FC<MoonViewer3DProps> = ({
     const sph = new THREE.Spherical().setFromVector3(dir);
     focusRef.current = { az: sph.theta, pol: sph.phi, dist: FOCUS_DISTANCE };
   }, [selectedFeature]);
+
+  // 左下の展開図：カメラに今見えている範囲を淡く塗る（「シアンの点1つしか見えていないわけでは
+  // ない」という指摘への対応）。1点だけでなく、実際に見えている角度（limbDeg）の範囲全体を
+  // ピクセル単位の角距離判定で塗るので、球面上の本当の見え方（ズームすると狭くなる）と一致する。
+  useEffect(() => {
+    const canvas = miniMapCanvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    const w = canvas.width;
+    const h = canvas.height;
+    const img = ctx.createImageData(w, h);
+    const lat0 = (viewCenter.lat * Math.PI) / 180;
+    const lon0 = (viewCenter.lon * Math.PI) / 180;
+    const sinLat0 = Math.sin(lat0);
+    const cosLat0 = Math.cos(lat0);
+    const limbRad = (viewCenter.limbDeg * Math.PI) / 180;
+    const cosLimb = Math.cos(limbRad);
+    // 縁を少しだけぼかす（角距離で約4°ぶんフェード）。見えるか見えないかの硬い境界線より
+    // 「だんだん端が見えにくくなる」実際の見え方に近い。
+    const featherRad = (4 * Math.PI) / 180;
+    const cosFeatherInner = Math.cos(Math.max(0, limbRad - featherRad));
+
+    for (let py = 0; py < h; py++) {
+      const lat = (Math.PI / 2) - ((py + 0.5) / h) * Math.PI;
+      const sinLat = Math.sin(lat);
+      const cosLat = Math.cos(lat);
+      for (let px = 0; px < w; px++) {
+        const lon = ((px + 0.5) / w) * 2 * Math.PI - Math.PI;
+        const cosD = sinLat * sinLat0 + cosLat * cosLat0 * Math.cos(lon - lon0);
+        let alpha = 0;
+        if (cosD > cosLimb) {
+          alpha = cosD >= cosFeatherInner ? 0.38
+            : 0.38 * (cosD - cosLimb) / (cosFeatherInner - cosLimb);
+        }
+        const idx = (py * w + px) * 4;
+        img.data[idx] = 34;      // cyan-400 相当
+        img.data[idx + 1] = 211;
+        img.data[idx + 2] = 238;
+        img.data[idx + 3] = Math.round(alpha * 255);
+      }
+    }
+    ctx.putImageData(img, 0, 0);
+  }, [viewCenter]);
 
   // --- ポインタ操作。回転・ズームは OrbitControls。ここでは hover とクリック選択・ピン設置だけ ---
   const handlePointerMove = (e: React.PointerEvent<HTMLCanvasElement>) => {
@@ -1106,7 +1163,7 @@ export const MoonViewer3D: React.FC<MoonViewer3DProps> = ({
         >
           <div className="flex items-center gap-1.5 text-[10px] text-slate-400 px-0.5">
             <Compass className="w-3 h-3 text-cyan-400 shrink-0" />
-            <span>展開図（{'○'}今の向き{pinnedInfo ? '・●ピン' : ''}）</span>
+            <span>展開図（水色＝今見えている範囲{pinnedInfo ? '・●ピン' : ''}）</span>
           </div>
           <div
             id="mini-map"
@@ -1121,15 +1178,23 @@ export const MoonViewer3D: React.FC<MoonViewer3DProps> = ({
               className="absolute inset-0 w-full h-full object-cover"
               draggable={false}
             />
+            {/* 「点1つしか見えていないわけではない」という指摘への対応：カメラの視野に実際に
+                入っている範囲全体を淡く塗る（ズームすると狭く、離れると広くなる）。 */}
+            <canvas
+              ref={miniMapCanvasRef}
+              width={200}
+              height={100}
+              className="absolute inset-0 w-full h-full pointer-events-none"
+            />
             <div
               id="mini-map-view-marker"
-              className="absolute w-3.5 h-3.5 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-cyan-300"
+              className="absolute w-2 h-2 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-cyan-300"
               style={{
                 left: `${((viewCenter.lon + 180) / 360) * 100}%`,
                 top: `${((90 - viewCenter.lat) / 180) * 100}%`,
                 boxShadow: '0 0 4px rgba(34,211,238,0.9)'
               }}
-              title="今カメラが向いている地点"
+              title="今カメラが真正面から見ている地点（中心）"
             />
             {pinnedInfo && (
               <div
