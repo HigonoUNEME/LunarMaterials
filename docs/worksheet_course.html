@@ -47,11 +47,13 @@
 
 <div class="band">あなたのミッションを1つ選ぶ（□にチェック）</div>
 <table class="mission">
-  <tr><th style="width:8mm"></th><th style="width:42mm">ミッション</th><th>基地に必要なこと</th></tr>
-  <tr><td class="check">☐</td><td>☀️ 太陽光発電基地</td><td>一年中よく日が当たること（発電したい）</td></tr>
-  <tr><td class="check">☐</td><td>🧊 氷採掘基地</td><td>氷がありそうなこと（＝ずっと日が当たらない「永久影」）</td></tr>
-  <tr><td class="check">☐</td><td>🏠 有人基地（人が住む）</td><td>電力が使えて、かつ氷（永久影）のすぐ近くにあること</td></tr>
+  <tr><th style="width:8mm"></th><th style="width:40mm">ミッション</th><th>基地に必要なこと</th></tr>
+  <tr><td class="check">☐</td><td>☀️ 太陽光発電基地</td><td>よく日が当たること。地面が平らなこと</td></tr>
+  <tr><td class="check">☐</td><td>🔭 電波天文台</td><td>地球の電波が届かないこと（＝月の裏側）。温度が安定していること</td></tr>
+  <tr><td class="check">☐</td><td>🧊 氷採掘基地</td><td>氷がありそうなこと（＝ずっと日が当たらない「永久影」のそば）。平らなこと</td></tr>
+  <tr><td class="check">☐</td><td>🏠 有人総合基地</td><td>電力・温度・氷・地球との通信をバランスさせること</td></tr>
 </table>
+<p class="hint">同じデータでも、ミッションが変われば最適な場所は変わる。氷採掘は南極に、電波天文台は裏側に、通信重視なら表側に――行き先は半球ごと変わります。</p>
 
 <div class="band">ステップ1<span class="step">月の温度は1日でどれくらい変わる？</span></div>
 <p class="hint">月には空気（大気）がありません。地球の砂漠でも昼夜差はせいぜい 20〜30 ℃ です。</p>
@@ -64,7 +66,7 @@
 </table>
 <b>気づいたこと</b>：なぜこんなに差が大きい？　温度カーブの形（朝の上がり方と夕方〜夜の下がり方）は左右対称？
 <div class="box"></div>
-<b>このデータはどこまで信じられる？</b>　<code>my_band</code> を <code>(-90,-80)</code>（南極のあたり）にしたとき、カーブと温度差はどうなった？　なぜだと思う？
+<b>このデータはどこまで信じられる？</b>　<code>my_band</code> を <code>(-90,-80)</code>（南極のあたり）にしたとき、カーブと温度差はどうなった？　なぜだと思う？（極では「昼夜」がはっきりせず、温度データも不確かになる）
 <div class="box sm"></div>
 
 <div class="band">ステップ2<span class="step">月の「海」と「陸」で何が違う？</span></div>
@@ -77,32 +79,46 @@
   <tr><td>海</td><td style="height:8mm"></td><td></td><td></td></tr>
   <tr><td>陸</td><td></td><td></td><td></td></tr>
 </table>
-<b>気づいたこと</b>：海のほうがクレーターが少ないのはなぜ？　「少ない＝新しい」と言えるのはなぜ？
+<b>気づいたこと</b>：海のほうがクレーターが少ないのはなぜ？　「少ない＝新しい」と言えるのはなぜ？　海（平ら・若い）と高地（でこぼこ・古い）、基地はどちらを取る？　それはミッションによって変わる？
 <div class="box"></div>
-<b>基地との関係</b>：平らで着陸しやすい「若い海」と、氷のある「古い極域高地」。基地はどちらを取る？（ステップ4・5で使う）
+<b>答え合わせ：USGS の公式地質図と比べる</b>
+<table>
+  <tr><th></th><th>あなたの推定<br>（クレーターから）</th><th>USGS 地質図<br>（相対年代の平均）</th></tr>
+  <tr><td>海</td><td style="height:7mm"></td><td></td></tr>
+  <tr><td>陸</td><td></td><td></td></tr>
+</table>
+<div class="row"><span class="lbl">海の面積割合：あなたの円近似</span><span class="fill" style="max-width:22mm"></span><span class="lbl">％　／　USGS 地質図</span><span class="fill" style="max-width:22mm"></span><span class="lbl">％</span></div>
+<b>気づいたこと</b>：あなたの推定は地質図と合っていた？　円で海を囲むと面積割合が大きめに出るのはなぜ？
 <div class="box sm"></div>
 
-<div class="band">ステップ3<span class="step">月の南極を細かく見る</span></div>
-<p class="hint">極では温度データが不確かなので、ここからは日照（LOLA）のデータを使う。南極には「一年中日が当たらない場所（永久影）」と「ほぼずっと日が当たる場所」がとなり合っています。</p>
-<b>予想</b>：南極の「平均日照率」のヒストグラムはどんな形になる？
+<div class="band">ステップ3<span class="step">月ぜんたいで環境を見る</span></div>
+<p class="hint"><code>load('環境')</code>＝月ぜんたいを1度マスに区切った環境指標。<code>temp_amp_K</code>（1日の温度差）・<code>night_min_K</code>（夜の底冷え）・<code>noon_sun_elev_deg</code>（正午の太陽高度）・<code>earth_elev_deg</code>（地球の仰角。正＝表側、負＝裏側）。</p>
+<b>予想</b>：「温度が安定」「地球が見える」「日がよく当たる」が<b>全部そろう</b>場所はあると思う？
 <div class="box sm"></div>
-<div class="row">
-  <span class="lbl"><b>自分で決めたしきい値</b>（これより日照率が低ければ永久影だろう）</span>
-  <span class="fill" style="max-width:30mm"></span><span class="lbl">%</span>
-</div>
-<div class="row">
-  <span class="lbl">そのしきい値に当てはまった地点の数</span>
-  <span class="fill" style="max-width:40mm"></span><span class="lbl">個</span>
-</div>
-<b>気づいたこと</b>：しきい値を大きく（ゆるく）すると地点の数はどう変わる？　なぜ？
+<b>結果</b>（4つの地域タイプの平均）
+<table>
+  <tr><th style="width:52mm">地域タイプ</th><th>日較差 temp_amp_K</th><th>夜の底 night_min_K</th><th>太陽高度</th><th>地球の仰角</th></tr>
+  <tr><td>赤道の海（静かの海）</td><td style="height:7mm"></td><td></td><td></td><td></td></tr>
+  <tr><td>中緯度の火砕丘（Aristarchus）</td><td></td><td></td><td></td><td></td></tr>
+  <tr><td>裏側・赤道（電波天文の候補域）</td><td></td><td></td><td></td><td></td></tr>
+  <tr><td>南極（Shackleton-de Gerlache）</td><td></td><td></td><td></td><td></td></tr>
+</table>
+<b>気づいたこと</b>：どこも「全部で一番」にはならなかった？　あなたのミッションで、いちばん大事な列はどれ？
 <div class="box"></div>
 
-<div class="band">ステップ4<span class="step">あなたのミッションの基地はどこ？</span></div>
-<b>あなたが <code>want</code> に設定した条件と重み</b>：
+<div class="band">ステップ4<span class="step">地域タイプを選んで、ミッションに合わせて評価する</span></div>
+<div class="row"><span class="lbl"><b>選んだ地域</b>（<code>my_region</code>）</span><span class="fill"></span></div>
+<b>あなたのスコア式（<code>want</code> の重み。0 なら「気にしない」。<code>earth_elev_deg</code> は電波天文なら「低い」＝裏側を高評価）</b>
+<table>
+  <tr><th>指標</th><th>太陽高度<br>noon_sun_elev_deg</th><th>日較差<br>temp_amp_K（低いほどよい）</th><th>地球の仰角<br>earth_elev_deg</th><th>夜の底<br>night_min_K（高いほどよい）</th></tr>
+  <tr><td>重み</td><td style="height:8mm"></td><td></td><td></td><td></td></tr>
+  <tr><td>高い/低い</td><td></td><td>低い</td><td></td><td>高い</td></tr>
+</table>
+<p class="hint">なぜその地域と重み配分にした？（自分のミッションで「何を重く見るか」）</p>
 <div class="box sm"></div>
 <b>点数が高かった場所（上位）</b>
 <table>
-  <tr><th>順位</th><th>緯度</th><th>経度</th><th>日照率 %</th><th>永久影率</th><th>氷までの距離 km</th><th>スコア</th></tr>
+  <tr><th>順位</th><th>緯度</th><th>経度</th><th>日較差 K</th><th>地球の仰角 °</th><th>太陽高度 °</th><th>スコア</th></tr>
   <tr><td>1</td><td style="height:7mm"></td><td></td><td></td><td></td><td></td><td></td></tr>
   <tr><td>2</td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
   <tr><td>3</td><td></td><td></td><td></td><td></td><td></td><td></td></tr>
@@ -111,19 +127,50 @@
 <p class="hint">その理由を3つ以上の文で（どの条件をどれくらい重く見たか、他の候補と比べてなぜここか）</p>
 <div class="box lg"></div>
 
-<div class="band">ステップ5<span class="step">他の班と比べる</span></div>
+<div class="pagebreak"></div>
+<div class="band">ステップ4b<span class="step">（氷採掘・南極を選んだ班）南極を細かく見る</span></div>
+<p class="hint">氷採掘の班、または太陽光・有人で「南極」を候補にした班だけ。<b>別のノートブック <code>course_moonbase_polar.ipynb</code> を開く</b>。他の班はステップ5へ。日照と傾斜（LOLA）のデータを使う。</p>
+<b>予想</b>：南極で「よく日が当たる場所」と「平らな場所」は、同じ場所にあると思う？
+<div class="box sm"></div>
+<div class="row">
+  <span class="lbl"><b>日照率のしきい値</b></span>
+  <span class="fill" style="max-width:20mm"></span><span class="lbl">%　→ 当てはまった地点</span>
+  <span class="fill" style="max-width:24mm"></span><span class="lbl">個</span>
+</div>
+<div class="row">
+  <span class="lbl"><b>傾斜のしきい値</b></span>
+  <span class="fill" style="max-width:20mm"></span><span class="lbl">度　→ 平らな地点</span>
+  <span class="fill" style="max-width:24mm"></span><span class="lbl">個</span>
+</div>
+<b>スコア上位の場所</b>：　緯度 <span class="fill" style="display:inline-block;width:24mm"></span>　経度 <span class="fill" style="display:inline-block;width:24mm"></span>　日照率 <span class="fill" style="display:inline-block;width:16mm"></span>%　氷まで <span class="fill" style="display:inline-block;width:16mm"></span>km
+<b>気づいたこと</b>：いちばん平らな地点は日が当たっている？　日照を重くすると傾斜は？
+<div class="box sm"></div>
+
+<div class="band">ステップ5<span class="step">他の班・実在の計画と比べる</span></div>
 <table>
-  <tr><th style="width:45mm">他の班のミッション</th><th>選んだ場所（緯度・経度）</th><th>自分の場所との違い</th></tr>
+  <tr><th style="width:42mm">他の班のミッション</th><th>選んだ場所（緯度・経度・半球）</th><th>自分の場所との違い</th></tr>
   <tr><td style="height:8mm"></td><td></td><td></td></tr>
   <tr><td style="height:8mm"></td><td></td><td></td></tr>
 </table>
-<b>わかったこと</b>：同じデータを使っているのに、なぜ班ごとに最適地が違った？
-「月面基地の最適地」に1つの正解はある？　ステップ2の「平らな海」と「氷のある極」のトレードオフはどう効いた？
+<b>実在の計画と比べる</b>（ノートブックの表から）
+<table>
+  <tr><th>計画</th><th>半球</th><th>地球の仰角 °</th><th>あなたのミッションと近い？</th></tr>
+  <tr><td>Artemis III（有人・氷）</td><td>南極</td><td style="height:6mm"></td><td></td></tr>
+  <tr><td>LCRT（裏側電波望遠鏡）</td><td>裏側</td><td></td><td></td></tr>
+  <tr><td>Apollo 11（赤道）</td><td>表側の海</td><td></td><td></td></tr>
+</table>
+<b>わかったこと</b>：同じデータを使っているのに、なぜ班ごとに<b>半球</b>までちがった？
+氷採掘は南極で合意、でも太陽光や有人は割れる。なぜ？「月面基地の最適地」に1つの正解はある？
 <div class="box lg"></div>
+<b>このデータで「分からないこと」「信じてよいか怪しいこと」</b>（3つ以上）
+<div class="box"></div>
 
-<p class="small">データ出典：USGS（Robbins クレーターDB・月の海の座標）／UCLA Diviner（Williams et al. 2017）／
-LRO LOLA（Mazarico et al. 2011）。日照率の絶対値は他の文献の数字と単純比較しないこと（相対的な明るさの目安として使う）。
-温度カーブが信頼できるのは緯度 ±70 度より低い範囲。</p>
+<p class="small">データ出典：USGS（Robbins クレーターDB・統合地質図・月の海の座標）／UCLA Diviner（Williams et al. 2017）／
+LRO LOLA（Mazarico et al. 2011・GDR 傾斜）／NASA Artemis III 候補地。
+<code>環境</code> データは地質図と Diviner の結合＋幾何計算（新規観測なし）。
+日照率・傾斜・地球の仰角の絶対値は他の文献と単純比較しない（相対的な目安として使う）。
+温度は緯度 ±70 度より低い範囲、傾斜は極点から 0.7 度より外が信頼できる。
+<code>earth_elev_deg</code> は秤動（±約7度）を無視した平均。</p>
 
 </body>
 </html>

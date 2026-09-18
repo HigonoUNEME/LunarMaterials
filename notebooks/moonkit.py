@@ -11,6 +11,19 @@
 - 情報Ⅰの範囲（平均・分散・相関・件数・閾値・重み付き和）を超える処理を関数の中に隠さない。
 - サンプリングを行う関数は乱数の種を固定し、実行ごとに結果が変わらないようにする。
 
+関数の分類（teacher_guide / helpersheet のヘルパー一覧もこの2階層で書く）:
+
+  【core】まず覚える。ガイド型の本体で使う
+    load / region / nearest / summary / summary_by / grid_count / scatter / hist / site_score
+
+  【extended】必要になったら使う。地域選択・極域・発展編・前処理の補助
+    south_pole / north_pole / region_type / earth_elevation / near_maria
+    dist_to_permanent_shadow / box_area_km2 / classify_by_box / join_grid
+    diurnal_curve / daily_swing
+
+  site_score と region_type だけは中身が数行を超える。それぞれの docstring と
+  本体のコメントに、何をしているか（正規化と重み付き和／緯度経度の箱で切り出し）を書いてある。
+
 使い方:
     from moonkit import *
     温度 = load('温度')
@@ -31,11 +44,15 @@ import matplotlib.pyplot as plt
 import matplotlib.font_manager as fm
 
 __all__ = [
+    # --- core（まず覚える）---
     'load', 'DATASETS', 'LT_COLS',
-    'region', 'south_pole', 'north_pole', 'classify_by_box', 'join_grid',
-    'near_maria', 'dist_to_permanent_shadow',
+    'region', 'nearest',
     'summary', 'summary_by', 'grid_count',
     'scatter', 'hist', 'site_score',
+    # --- extended（必要になったら）---
+    'south_pole', 'north_pole', 'region_type', 'earth_elevation',
+    'near_maria', 'dist_to_permanent_shadow',
+    'box_area_km2', 'classify_by_box', 'join_grid',
     'diurnal_curve', 'daily_swing',
 ]
 
@@ -81,10 +98,17 @@ _MOON_BG = plt.imread(_moon_bg_path) if _moon_bg_path else None
 # --------------------------------------------------------------------------
 DATASETS = {
     'クレーター':       'craters_subset.csv',          # Robbins DB（緯度経度・直径・形）
-    'クレーター深さ':   'craters_3d.csv',              # Wang & Wu 2021（直径・深さ）
+    'クレーター深さ':   'craters_3d.csv',              # Wang & Wu 2021（直径・深さ。※現在の劣化した深さ）
     'クレーター年代':   'deepcraters.csv',             # DeepCraters（推定地質年代 1〜5）
     '温度':             'diviner_global.csv.gz',       # Diviner（現地時間0〜23時の温度カーブ）
-    '極域日照':         'lola_polar_illumination.csv',  # LOLA（南極・北極の平均日照率・永久影率）
+    '極域日照':         'lola_polar_illumination.csv',  # LOLA（南極・北極の日照率・永久影率・傾斜 slope_deg）
+    '地質':             'moon_geology_grid.csv',       # USGS 統合地質図（1度グリッド。海陸・相対年代の“答え合わせ”用）
+    '着陸地点':         'landing_sites.csv',           # 実在の着陸地点・Artemis候補地・参照地形（手キュレーション）
+    '夜の温度':         'diviner_nighttime.csv.gz',    # Diviner 夜の最低温度と異常（岩の多さ＝熱物性の代理。発展・クラスタリング用）
+    'アイソクロン':     'isochron_reference.csv',      # クレーター密度→絶対年代の参照表（Neukum PF+編年関数。発展）
+    '環境':             'site_environment.csv',        # 全球1度グリッドの環境指標（海陸・温度・地球可視性・傾斜。南極以外も同じ土俵で評価）
+    '地域':             'candidate_regions.csv',       # 候補地域アーキタイプ（赤道の海／裏側／溶岩チューブ…。region_type で箱に切り出す）
+    '縦孔':             'lunar_pits.csv',              # 溶岩チューブの天窓（放射線・熱の遮蔽＝長期滞在の候補地）
 }
 
 _AGE_NAMES = {
@@ -97,6 +121,8 @@ def load(key):
     """データセットを日本語キーで読み込んで DataFrame を返す。
 
     使えるキー: 'クレーター' / 'クレーター深さ' / 'クレーター年代' / '温度' / '極域日照'
+              / '地質'（海陸・相対年代の答え合わせ用）/ '着陸地点'（実在の着陸地点）
+              / '夜の温度'（夜の最低温度と異常。発展・クラスタリング用）
     ファイル名（例 'diviner_global.csv'）を直接渡してもよい。
     """
     fname = DATASETS.get(key, key)
@@ -138,7 +164,11 @@ def region(df, lat=None, lon=None):
 
 
 def south_pole(df, deg=80):
-    """南極側（緯度 <= -deg）だけにしぼる。"""
+    """南極側（緯度 <= -deg）だけにしぼる。
+
+    注意：`load('極域日照')` は南北 |緯度|≳83度 しか収録していない（日照率・傾斜・永久影率は
+    極域専用データ）。赤道・中緯度・裏側を評価したいときは `load('環境')` と `region_type()` を使う。
+    """
     lat_c, _ = _latlon_cols(df)
     return df[df[lat_c] <= -deg].copy()
 
@@ -147,6 +177,76 @@ def north_pole(df, deg=80):
     """北極側（緯度 >= deg）だけにしぼる。"""
     lat_c, _ = _latlon_cols(df)
     return df[df[lat_c] >= deg].copy()
+
+
+def box_area_km2(lat, lon):
+    """緯度経度の四角い範囲の、球面上の面積 [km^2]。
+
+        box_area_km2(lat=(20, 45), lon=(-40, -5))   # 雨の海のあたり
+    月半径 1737.4 km。area = R^2 · Δλ · (sinφ2 − sinφ1)。
+    """
+    la = np.deg2rad(sorted(lat))
+    lo = np.deg2rad(sorted(lon))
+    return float(_R_MOON_KM ** 2 * (lo[1] - lo[0]) * (np.sin(la[1]) - np.sin(la[0])))
+
+
+def nearest(df, lat, lon, n=1):
+    """指定した緯度・経度にいちばん近い行を返す（グリッドデータを『実在の地点』で引く）。
+
+        nearest(load('温度'), 0.674, 23.473)        # Apollo 11 の場所の温度カーブ
+        nearest(load('地質'), -69.37, 32.35)        # Chandrayaan-3 の場所の地質
+        nearest(load('極域日照'), -86.0, -2.9, n=5)  # Malapert Massif 近傍5点
+    """
+    lat_c, lon_c = _latlon_cols(df)
+    dlat = df[lat_c] - lat
+    dlon = ((df[lon_c] - lon + 180) % 360 - 180) * np.cos(np.deg2rad(lat))
+    d = np.hypot(dlat, dlon)
+    out = df.assign(_km=(d * 1737.4 * np.pi / 180)).nsmallest(n, '_km')
+    return out.iloc[0] if n == 1 else out
+
+
+def region_type(df, name):
+    """名前つきの候補地域（`data/candidate_regions.csv`）の緯度経度の箱で df を切り出す。
+
+        赤道の海 = region_type(load('環境'), '赤道の海（静かの海）')
+        裏側     = region_type(load('環境'), '裏側・赤道（電波天文の候補域）')
+        site_score(裏側, {'earth_elev_deg': ('低い', 3), 'temp_amp_K': ('低い', 2)})
+
+    使える名前は `load('地域')['name']` で一覧できる。'南極（Shackleton…）' のように
+    経度が -180〜180 全域の箱は緯度だけでしぼる。
+    """
+    path = _find('data', 'candidate_regions.csv')
+    if path is None:
+        raise FileNotFoundError('candidate_regions.csv')
+    regions = pd.read_csv(path)
+    hit = regions[regions['name'] == name]
+    if hit.empty:
+        raise ValueError(f"地域名が見つかりません: {name}\n"
+                         f"使える名前: {'／'.join(regions['name'])}")
+    r = hit.iloc[0]
+    lat_c, lon_c = _latlon_cols(df)
+    m = df[lat_c].between(r['lat_min'], r['lat_max'])
+    lo_min, lo_max = float(r['lon_min']), float(r['lon_max'])
+    if not (lo_min <= -179.9 and lo_max >= 179.9):        # 全経度指定でなければ経度もしぼる
+        if lo_max > 180:                                   # +180度をまたぐ箱（裏側など）
+            m &= (df[lon_c] >= lo_min) | (df[lon_c] <= lo_max - 360)
+        else:
+            m &= df[lon_c].between(lo_min, lo_max)
+    return df[m].copy()
+
+
+def earth_elevation(lat, lon):
+    """ある地点から見た地球のおおよその仰角 [度]。正なら表側、負なら裏側（地球が地平線の下）。
+
+        earth_elevation(0.674, 23.473)     # Apollo 11 ≒ +66（地球がほぼ真上）
+        earth_elevation(-45.44, 177.60)    # Chang'e 4（裏側）< 0
+
+    sub-Earth 点を（緯度0, 経度0）とみなし、そこからの角距離を 90度から引いた近似。
+    秤動（±約7度）は無視。`load('環境')` の `earth_elev_deg` 列と同じ計算。
+    """
+    ang = np.degrees(np.arccos(np.clip(
+        np.cos(np.radians(lat)) * np.cos(np.radians(lon)), -1.0, 1.0)))
+    return float(90.0 - ang)
 
 
 def classify_by_box(df, boxes, colname='区分', other='その他'):
@@ -228,7 +328,8 @@ def dist_to_permanent_shadow(df, threshold=0.9, colname='km_to_shadow'):
     """各地点から、いちばん近い永久影までの「おおよその距離」[km] を `km_to_shadow` 列として足す。
 
     永久影＝`permanent_shadow_fraction >= threshold` の地点。極付近を平面に近似し、
-    最近傍探索（scipy.spatial.cKDTree）で距離を求める。'極域日照' データに対して使う。
+    最近傍探索（scipy.spatial.cKDTree）で距離を求める。**'極域日照'（|緯度|≳83度）専用**。
+    赤道・中緯度・裏側には永久影も永久影データも無いので、この関数は使えない。
 
         極 = dist_to_permanent_shadow(south_pole(load('極域日照')))
     """
@@ -397,17 +498,28 @@ def site_score(df, want, top=10):
     各列を (値 - 最小) / (最大 - 最小) で 0〜1 に直し、'低い' なら 1 から引く。
     それらを重みで加重平均したものが 'スコア' 列（0〜1、大きいほど条件に合う）。
     """
+    # 0) want に挙げた列のうち、この df では全部欠測のもの（例：南極で slope_deg）は
+    #    使えないので外す（クラッシュせず、何を外したか知らせる）
+    want = dict(want)
+    for col in [c for c in list(want) if c in df.columns and df[c].isna().all()]:
+        print(f'※ {col} はこの範囲では全部欠測のため、スコアから外しました')
+        want.pop(col)
+    # 1) want に挙げた列に欠測がある行は落とす（比べられないので）
     out = df.dropna(subset=list(want)).copy()
     total_w = sum(w for _, w in want.values())
     score = pd.Series(0.0, index=out.index)
     for col, (direction, w) in want.items():
         s = out[col]
+        # 2) min–max 正規化：その列の最小→0、最大→1 に直す（Excel なら =(x-MIN)/(MAX-MIN)）
         lo, hi = s.min(), s.max()
         norm = (s - lo) / (hi - lo) if hi > lo else pd.Series(0.5, index=out.index)
+        # 3) 「低いほどよい」指標は向きを反転（1 から引く）
         if direction in ('低い', 'low', '小さい'):
             norm = 1 - norm
-        out[f'_norm_{col}'] = norm
+        out[f'_norm_{col}'] = norm          # 途中経過も列に残す（ブラックボックスにしない）
+        # 4) 重みをかけて足していく
         score += w * norm
+    # 5) 重みの合計で割って 0〜1 に戻したものが「スコア」
     out['スコア'] = score / total_w
     out = out.sort_values('スコア', ascending=False)
     return out.head(top) if top is not None else out

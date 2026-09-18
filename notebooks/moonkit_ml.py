@@ -26,11 +26,12 @@ from sklearn.tree import DecisionTreeClassifier, export_text
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.neural_network import MLPClassifier
 from sklearn.ensemble import RandomForestClassifier
+from sklearn.cluster import KMeans, AgglomerativeClustering, DBSCAN
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 from sklearn.pipeline import make_pipeline
 
-__all__ = ['train', 'METHODS']
+__all__ = ['train', 'cluster', 'METHODS', 'CLUSTER_METHODS']
 
 METHODS = ['ロジスティック回帰', '決定木', 'k近傍', 'ニューラルネット', 'ランダムフォレスト']
 
@@ -105,6 +106,94 @@ def train(df, features, label, method='決定木', 複雑さ='ふつう',
         _plot_boundary(model, Xte, yte, fx, fy, method, my_threshold)
 
     return {'model': model, 'テスト正解率': acc_te, '説明できる': _READABLE[method]}
+
+
+CLUSTER_METHODS = ['kmeans', '階層', 'DBSCAN']
+
+
+def cluster(df, features, k=4, method='kmeans', n_sample=6000, seed=0,
+            check=None, show=True):
+    """ラベルを与えずに、features が似ている地点をグループ（クラスタ）にまとめる。
+
+    features : グループ分けに使う列名のリスト（例 ['logD','eccentricity','ellipticity']）
+    k        : グループの数（kmeans・階層のみ。DBSCAN は自動）
+    method   : 'kmeans' / '階層' / 'DBSCAN'
+    check    : 「そのクラスタに占める割合」を知りたいカテゴリ列名（例 '区分'）。
+               クラスタが海／陸などのラベルに対応しているかの確認に使う。
+
+    返り値：'クラスタ' 列を足した DataFrame と、各クラスタの特徴の平均表。
+    中身は「各クラスタが features 空間のどこにいるか」を必ず表で見せる（ブラックボックスにしない）。
+    """
+    d = df.dropna(subset=features).copy()
+    if len(d) > n_sample:
+        d = d.sample(n=n_sample, random_state=seed)
+    X = StandardScaler().fit_transform(d[features].to_numpy())
+
+    if method == 'kmeans':
+        lab = KMeans(n_clusters=k, n_init=10, random_state=seed).fit_predict(X)
+    elif method == '階層':
+        lab = AgglomerativeClustering(n_clusters=k).fit_predict(X)
+    elif method == 'DBSCAN':
+        lab = DBSCAN(eps=0.8, min_samples=20).fit_predict(X)   # -1 = どこにも属さない点
+    else:
+        raise ValueError(f"method は {CLUSTER_METHODS} のどれか（'{method}' は不明）")
+    d['クラスタ'] = lab
+
+    summary = (d.groupby('クラスタ')[features].mean().round(3))
+    summary.insert(0, '地点数', d.groupby('クラスタ').size())
+    if check is not None and check in d.columns:
+        frac = pd.crosstab(d['クラスタ'], d[check], normalize='index').round(3) * 100
+        for c in frac.columns:
+            summary[f'{check}={c} %'] = frac[c]
+
+    if show:
+        print(f'方法：{method}' + (f'（グループ数 {k}）' if method != 'DBSCAN' else ''))
+        n_noise = int((lab == -1).sum())
+        if n_noise:
+            print(f'  どのグループにも入らない点：{n_noise}')
+        print('  各グループの特徴（features の平均）:')
+        print(summary.to_string())
+        if check is not None and check in d.columns:
+            cols = [c for c in summary.columns if c.startswith(f'{check}=')]
+            hi = summary[cols].max(axis=1).max()
+            print(f'  → どれかのグループが {check} のどれか1つで {hi:.0f}% を超えるなら、'
+                  f'そのラベルに沿って分かれている。横並びなら「{check}では分かれない」。')
+        _plot_clusters(d, features, method)
+
+    return d, summary
+
+
+def _plot_clusters(d, features, method):
+    lat_c = next((c for c in d.columns if c.lower() == 'lat'), None)
+    lon_c = next((c for c in d.columns if c.lower() == 'lon'), None)
+    labs = sorted(d['クラスタ'].unique())
+    colors = plt.cm.tab10(np.linspace(0, 1, 10))
+    fig, axes = plt.subplots(1, 2, figsize=(12.5, 4.6))
+    # 左：地図
+    if lat_c and lon_c:
+        for i, L in enumerate(labs):
+            s = d[d['クラスタ'] == L]
+            axes[0].scatter(s[lon_c], s[lat_c], s=7, color=colors[i % 10],
+                            label=f'グループ{L}', alpha=0.6)
+        axes[0].set_xlabel('経度'); axes[0].set_ylabel('緯度')
+        axes[0].set_title(f'{method}：グループの分布')
+        axes[0].legend(fontsize=8, markerscale=1.5)
+    else:
+        axes[0].axis('off')
+    # 右：特徴の平均（標準化して比較しやすく）
+    m = d.groupby('クラスタ')[features].mean()
+    mz = (m - m.mean()) / m.std(ddof=0)
+    x = np.arange(len(features)); w = 0.8 / max(1, len(labs))
+    for i, L in enumerate(labs):
+        axes[1].bar(x + i * w, mz.loc[L], w, color=colors[i % 10], label=f'グループ{L}')
+    axes[1].set_xticks(x + 0.4 - w / 2)
+    axes[1].set_xticklabels(features, rotation=20, ha='right', fontsize=8)
+    axes[1].axhline(0, color='#888', lw=0.8)
+    axes[1].set_ylabel('平均（標準化）')
+    axes[1].set_title('各グループが「どの特徴が高い／低い」か')
+    axes[1].legend(fontsize=8)
+    plt.tight_layout()
+    plt.show()
 
 
 def _plot_boundary(model, X, y, fx, fy, method, my_threshold):

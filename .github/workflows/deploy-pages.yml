@@ -1,4 +1,10 @@
-name: Deploy web app (JupyterLite) to GitHub Pages
+name: Deploy web app to GitHub Pages
+
+# サイトの構成（Ver.1.8）:
+#   /            … 3D入口ページ（webapp/react を Vite でビルド）
+#   /app/        … JupyterLite 一式（分析ノートブック）
+#   /data.html   … データ一覧ページ
+#   /data/       … CSV 実体（直接ダウンロード用）
 
 on:
   push:
@@ -6,6 +12,7 @@ on:
     paths:
       - "notebooks/**"
       - "data/**"
+      - "course/**"
       - "webapp/**"
       - ".github/workflows/deploy-pages.yml"
   workflow_dispatch:
@@ -25,6 +32,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # --- JupyterLite（Python）---
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
@@ -33,20 +41,53 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           python -m pip install "jupyterlite-core==0.8.*" "jupyterlite-pyodide-kernel==0.8.*" jupyterlab nbformat
+          python -m pip install pandas numpy openpyxl matplotlib scipy Pillow
+
+      - name: Rebuild the Excel courseware (course_moonbase.xlsx)
+        run: |
+          python course/build_course_data.py
+          python course/build_course_xlsx.py
 
       - name: Assemble teaching material
         run: python webapp/assemble.py
 
-      - name: Build JupyterLite site
+      - name: Generate entry-page site environment JSON
+        run: python webapp/react/scripts/gen_site_env.py
+
+      - name: Generate 3D入口ページのデータ層テクスチャ（地球の風 Phase1・2）
+        run: python webapp/react/scripts/gen_overlay_textures.py
+
+      - name: Generate 3D入口ページの1日の温度アニメーション（地球の風 Phase3）
+        run: python webapp/react/scripts/gen_diurnal_frames.py
+
+      - name: Generate 月球儀ホバー用の1日の温度ルックアップ（常設ピン廃止対応）
+        run: python webapp/react/scripts/gen_diurnal_lookup.py
+
+      - name: Build JupyterLite site into /app
         run: |
           jupyter lite build \
             --contents webapp/content \
-            --output-dir webapp/_output
+            --output-dir webapp/_output/app
 
-      - name: Use custom landing + data pages
+      # --- 3D入口ページ（Node / Vite）---
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Build 3D landing page
+        working-directory: webapp/react
         run: |
-          cp webapp/index.html webapp/_output/index.html
-          cp webapp/data.html  webapp/_output/data.html
+          npm ci
+          npm run build
+
+      - name: Compose the site
+        run: |
+          cp -r webapp/react/dist/. webapp/_output/
+          cp webapp/data.html webapp/_output/data.html
+          cp webapp/shadow_sim.html webapp/_output/shadow_sim.html
+          cp -r webapp/_dl webapp/_output/data
+          du -sh webapp/_output
+          ls -R webapp/_output | head -60
 
       - uses: actions/upload-pages-artifact@v3
         with:

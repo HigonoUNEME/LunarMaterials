@@ -1,0 +1,68 @@
+[
+ {
+  "key": "temp_amp_K",
+  "label": "1日の温度差",
+  "unit": "K",
+  "desc": "いちばん暑い時刻といちばん寒い時刻の差。赤道で大きく、極で小さい。",
+  "min": 16.6,
+  "max": 302.8,
+  "texture": "textures/overlay_temp_amp_K.png",
+  "gradientCss": "linear-gradient(to right, #3a4cc0, #6788ed, #99bafe, #c8d7ef, #edd0c1, #f6a789, #e16852, #b30326)",
+  "source": "data/site_environment.csv"
+ },
+ {
+  "key": "night_min_K",
+  "label": "夜の最低温度",
+  "unit": "K",
+  "desc": "夜がいちばん冷え込んだときの温度。低いほど、夜を越すのに熱が要る。",
+  "min": 26.6,
+  "max": 114.0,
+  "texture": "textures/overlay_night_min_K.png",
+  "gradientCss": "linear-gradient(to right, #3a4cc0, #6788ed, #99bafe, #c8d7ef, #edd0c1, #f6a789, #e16852, #b30326)",
+  "source": "data/site_environment.csv"
+ },
+ {
+  "key": "noon_sun_elev_deg",
+  "label": "正午の太陽高度",
+  "unit": "°",
+  "desc": "正午に太陽がどれだけ高く昇るか（=90-|緯度|の近似）。発電量と熱負荷の代理。",
+  "min": 0,
+  "max": 90,
+  "texture": "textures/overlay_noon_sun_elev_deg.png",
+  "gradientCss": "linear-gradient(to right, #440154, #46317e, #365b8c, #277e8e, #1fa187, #49c16d, #9fd938, #fde724)",
+  "source": "data/site_environment.csv"
+ },
+ {
+  "key": "earth_elev_deg",
+  "label": "地球の仰角",
+  "unit": "°",
+  "desc": "正＝表側（地球が見える・通信できる）、負＝裏側（地球が見えない・電波が静か）。",
+  "min": -90,
+  "max": 90,
+  "texture": "textures/overlay_earth_elev_deg.png",
+  "gradientCss": "linear-gradient(to right, #053061, #2f78b5, #87beda, #dbe9f1, #fbe2d4, #ef9b7a, #c03538, #67001f)",
+  "source": "data/site_environment.csv"
+ },
+ {
+  "key": "slope_deg",
+  "label": "全球の傾斜",
+  "unit": "°",
+  "desc": "地面の傾き。小さいほど平ら。|緯度|≥85°は透明（欠測。極は別データで見る）。",
+  "min": 0,
+  "max": 20,
+  "texture": "textures/overlay_slope_deg.png",
+  "gradientCss": "linear-gradient(to right, #00224d, #213b6e, #4c546c, #6c6d72, #8d8978, #b1a570, #d8c45b, #fde737)",
+  "source": "data/site_environment.csv"
+ },
+ {
+  "key": "age_index",
+  "label": "地質年代",
+  "unit": "",
+  "desc": "USGS統合地質図の相対年代。1=最古、5=最新。海（新しい）と陸（古い）の違いが出る。",
+  "min": 1,
+  "max": 5,
+  "texture": "textures/overlay_age_index.png",
+  "gradientCss": "linear-gradient(to right, #9e0142, #e1514a, #fba55c, #fee899, #ecf7a2, #a1d9a4, #479fb3, #5e4fa2)",
+  "source": "data/site_environment.csv"
+ }
+]

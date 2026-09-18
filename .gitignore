@@ -7,4 +7,25 @@ __pycache__/
 # webapp: 生成物（GitHub Actions がビルドする）
 webapp/content/
 webapp/_output/
+webapp/_dl/
 webapp/data.html
+
+# webapp/react: 依存とビルド出力（package-lock.json はコミットする）
+webapp/react/node_modules/
+webapp/react/dist/
+
+# course: 前処理済み中間データ（build_course_data.py が data/ から作る）。
+# 配布物 course_moonbase.xlsx はコミットする
+course/data/
+
+# docs: build_mare_outline.py がダウンロードする LROC モザイクのキャッシュ
+# （成果物 docs/mare_outline.npz はコミットする）
+docs/_lroc_color_4k.tif
+
+# tools: 前処理スクリプトがダウンロードする生データのキャッシュ
+# （成果物 data/*.csv はコミットする）
+tools/_cache/
+
+# webapp/react: build_moon_textures.py がダウンロードする月面モザイクの生TIFFキャッシュ
+# （成果物 public/textures/moon_lroc_color_{4k,8k}.jpg はコミットする）
+webapp/react/scripts/_cache/

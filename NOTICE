@@ -1,0 +1,72 @@
+月データ探索教材 (moon data exploration teaching material)
+
+Copyright 2025-2026 the repository authors.
+
+Licensed under the Apache License, Version 2.0 (see the LICENSE file).
+
+================================================================================
+Third-party components
+================================================================================
+
+webapp/react/  — 3D入口ページ
+  Google AI Studio が生成した React テンプレート（Apache License 2.0）を出発点に
+  改変したもの。オリジナルのライセンスヘッダ（webapp/react/src/App.tsx の
+  SPDX-License-Identifier: Apache-2.0）を保持しています。
+  ライブラリ: three (MIT), react / react-dom (MIT), lucide-react (ISC),
+  tailwindcss (MIT), vite (MIT)。
+
+notebooks/assets/lroc_color_2k.jpg — 3D月球儀のテクスチャ
+webapp/react/public/textures/moon_lroc_color_{2k,4k,8k}.jpg — 同、ズーム時の高解像度差し替え用
+docs/mare_outline.npz         — 月の海の輪郭ポリライン
+  NASA Scientific Visualization Studio「CGI Moon Kit」(ID 4720, 2019年版, LROC/LOLA 由来) の
+  月面カラーモザイクを縮小・閾値化、または JPEG 再圧縮したもの。パブリックドメイン（NASA SVS）。
+  4k/8k 版は webapp/react/scripts/build_moon_textures.py が生成（生データはコミットしない）。
+
+webapp/react/public/textures/earth_daymap_2k.jpg — 3D入口ページに「遊び心」で置いた地球
+webapp/react/public/textures/sun_2k.jpg           — 同、太陽（実際の見かけの大きさで配置）
+  Solar System Scope Textures（https://www.solarsystemscope.com/textures/）由来。
+  CC BY 4.0（https://creativecommons.org/licenses/by/4.0/）。NASA Blue Marble（地球）/
+  NASA・SDO（太陽）のデータを3D可視化用に再構成したもの（同サイトの説明による）。
+  改変：JPEG再圧縮のみ（解像度は変更なし）。webapp/react/scripts/build_planet_textures.py が生成
+  （生データはコミットしない）。
+
+================================================================================
+データセットのライセンス（コードのライセンスとは別。data/LICENSES.md と
+data/SOURCES.md を参照）
+================================================================================
+
+  craters_subset.csv          パブリックドメイン (NASA PDS / USGS。Robbins 2018)
+  craters_3d.csv              CC BY 4.0 (Wang, Wu, Xue, Li & Ma 2021)
+                              https://creativecommons.org/licenses/by/4.0/
+                              改変: 直径10km以上に抽出・列名変更・CSV化
+  deepcraters.csv             CC BY 4.0 (Yang, Zhao, Bruzzone ほか 2020)
+                              https://creativecommons.org/licenses/by/4.0/
+                              改変: Aged サブセット (Age列つき) を抽出
+  diviner_global.csv(.gz)     パブリックドメイン (NASA。UCLA Diviner チーム /
+                              Williams ほか 2017)。改変: 24枚を現地時間で位相整列し
+                              0〜23時の温度カーブに再構成
+  diviner_nighttime.csv.gz    パブリックドメイン (NASA。UCLA Diviner チーム /
+                              Williams ほか 2017、原理 Bandfield ほか 2011)。
+                              改変: 夜の最低温度と異常の2製品を結合
+  isochron_reference.csv      計算値。式の出典 Neukum, Ivanov & Hartmann (2001),
+                              Space Science Reviews 96。tools/build_isochron.py で生成
+  lola_polar_illumination.csv パブリックドメイン (NASA。LRO LOLA チーム)。
+                              日照率: Mazarico ほか 2011。傾斜 slope_deg: LOLA GDR
+                              LDSM (240m基線)。改変: 約1kmブロックで整理・緯度経度に投影
+  moon_geology_grid.csv       パブリックドメイン (USGS。Fortezzo ほか 2020,
+                              Unified Geologic Map of the Moon, SIM 3316)。
+                              改変: ポリゴンを1度グリッド64,800点に空間結合
+  landing_sites.csv           パブリックドメイン (NASA/USGS 座標。Wagner ほか 2017
+                              ほか)。手キュレーションの一覧表 (29件)
+  maria_boundaries.csv        パブリックドメイン (USGS / IAU Gazetteer)
+  site_environment.csv        パブリックドメイン (USGS / NASA 由来) + 幾何計算。
+                              moon_geology_grid + diviner_global/nighttime を1度グリッドで
+                              結合し正午の太陽高度・地球の仰角を計算。新規観測なし。
+                              tools/build_site_environment.py で生成
+  candidate_regions.csv       パブリックドメイン (USGS/IAU 座標 + 各ミッション文献)。
+                              候補地域8件の緯度経度の箱・理由・弱点 (手キュレーション)
+  lunar_pits.csv              座標は文献値 (LROC 由来。Wagner & Robinson 2014,
+                              Icarus 237 ほか)。縦孔7件を手入力
+
+CC BY 4.0 の2ファイルを使う成果物では著者・出典・ライセンスを明記してください。
+パブリックドメインのデータも学術慣行として出典明記を推奨します。

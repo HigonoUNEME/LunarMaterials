@@ -1,0 +1,30 @@
+{
+  "name": "moon-data-explorer",
+  "private": true,
+  "version": "1.17.1",
+  "type": "module",
+  "description": "月データ探索教材の入口ページ（Three.js 3D月球儀）。GitHub Pages 用に静的ビルドする。",
+  "scripts": {
+    "dev": "vite --port=3000",
+    "build": "vite build",
+    "preview": "vite preview",
+    "lint": "tsc --noEmit"
+  },
+  "dependencies": {
+    "lucide-react": "0.546.0",
+    "react": "19.1.1",
+    "react-dom": "19.1.1",
+    "three": "0.185.1"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "4.1.14",
+    "@types/node": "22.14.0",
+    "@types/react": "19.1.12",
+    "@types/react-dom": "19.1.9",
+    "@types/three": "0.185.4",
+    "@vitejs/plugin-react": "5.0.4",
+    "tailwindcss": "4.1.14",
+    "typescript": "5.8.3",
+    "vite": "6.3.6"
+  }
+}

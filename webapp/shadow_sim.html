@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>永久影のできかた ― クレーター断面シミュレーター</title>
+<!--
+  月データ探索教材 / requirements_v3.2.md R9・v3.3 I8。
+  「なぜ極のクレーターだけが永久影になるのか」を、緯度・クレーターの深さ・太陽高度を
+  動かして確かめる定性モデル。幾何だけ（太陽光線とクレーター壁の交点）。絶対値は出さない。
+  クライアント側のみ。外部通信なし。
+-->
+<style>
+  :root { color-scheme: dark; }
+  body { margin:0; background:#0b1020; color:#e6ebff;
+         font:14px/1.6 system-ui,"Hiragino Kaku Gothic ProN","Yu Gothic",sans-serif; }
+  header { padding:14px 18px; border-bottom:1px solid #223; }
+  h1 { margin:0; font-size:16px; }
+  header p { margin:4px 0 0; color:#9fb0d6; font-size:12px; }
+  main { display:flex; flex-wrap:wrap; gap:18px; padding:18px; align-items:flex-start; }
+  #panel { flex:0 0 300px; display:flex; flex-direction:column; gap:16px; }
+  .ctl label { display:flex; justify-content:space-between; font-weight:600; font-size:13px; }
+  .ctl input[type=range] { width:100%; }
+  .ctl .sub { color:#9fb0d6; font-size:11px; }
+  #stage { flex:1 1 420px; min-width:320px; }
+  canvas { width:100%; height:auto; background:#05070f; border:1px solid #223; border-radius:8px; }
+  .readout { background:#121a30; border:1px solid #263354; border-radius:8px; padding:10px 12px; }
+  .readout b { color:#ffd479; }
+  .big { font-size:22px; font-weight:700; }
+  .presets button { margin:2px 3px 0 0; padding:4px 8px; font-size:12px;
+    background:#1b2540; color:#cfe0ff; border:1px solid #34477a; border-radius:6px; cursor:pointer; }
+  .presets button:hover { background:#26355c; }
+  .note { color:#8fa2cc; font-size:11px; }
+  footer { padding:12px 18px 24px; color:#7f90b8; font-size:11px; border-top:1px solid #223; }
+  code { background:#172038; padding:1px 4px; border-radius:4px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>永久影のできかた ― クレーター断面シミュレーター</h1>
+  <p>緯度・クレーターの深さ・太陽の高さを動かして、クレーターの床に日が当たるか／当たらないかを見る。
+     幾何だけの定性モデル（順序と仕組みを見るためのもの。日照率の絶対値は出さない）。</p>
+</header>
+
+<main>
+  <div id="panel">
+    <div class="ctl">
+      <label>緯度 <span id="latV">-88.0°</span></label>
+      <input id="lat" type="range" min="-89.8" max="-70" step="0.1" value="-88">
+      <div class="sub">南極に近いほど、1年でいちばん高い太陽の高さが低くなる（＝影が消えにくい）。</div>
+    </div>
+    <div class="ctl">
+      <label>クレーターの深さ／直径 <span id="kV">0.20</span></label>
+      <input id="k" type="range" min="0.05" max="0.35" step="0.01" value="0.20">
+      <div class="sub">深いクレーターほど、床が縁の陰に隠れやすい。単純クレーターはおよそ 0.2。</div>
+    </div>
+    <div class="ctl">
+      <label>太陽の高さ（今の季節） <span id="sunV">1.0°</span></label>
+      <input id="sun" type="range" min="0" max="8" step="0.05" value="1.0">
+      <div class="sub">月の自転軸の傾きは約 1.54°。極ではこれが1年の太陽高度のふれ幅の目安。</div>
+    </div>
+
+    <div class="presets">
+      <div class="sub" style="margin-bottom:2px">例に合わせてみる（緯度を動かして境目を探す）：</div>
+      <button data-lat="-89.7" data-k="0.28" data-sun="0.4">シャクルトン級（南極点近く・深い）</button>
+      <button data-lat="-82.0" data-k="0.18" data-sun="2.0">南緯82°・ふつうの深さ</button>
+      <button data-lat="-74.0" data-k="0.12" data-sun="4.0">南緯74°・浅いクレーター</button>
+    </div>
+
+    <div class="readout">
+      <div>床のうち影になっている割合：<span class="big" id="floorShadow">–</span></div>
+      <div class="note" id="floorNote"></div>
+      <hr style="border-color:#263354">
+      <div>1年を通して床の中心に日が当たるか：<b id="annual">–</b></div>
+      <div class="note">「1年でいちばん高い太陽」でも床の中心が陰なら、そこは<b>永久影</b>。</div>
+    </div>
+    <div class="note">
+      実データとの比べ方：<code>lola_polar_illumination.csv</code> の <code>average_illumination_percent</code> と
+      <code>permanent_shadow_fraction</code> を、自分のモデルの予想と見比べる。モデルは縁を円弧・
+      太陽を点光源と単純化しているので、細かい数字は合わない（それがモデルの限界）。
+    </div>
+  </div>
+
+  <div id="stage">
+    <canvas id="cv" width="760" height="440"></canvas>
+    <p class="note">横＝クレーターを南北に切った断面。左が赤道側、右が極側。黄色い線は「1年でいちばん高い太陽」からの光。
+       灰色＝日なた、濃い青＝影。</p>
+  </div>
+</main>
+
+<footer>
+  月データ探索教材（<a href="./" style="color:#9db8ff">入口へ戻る</a>）。この図は教育用の定性モデルで、
+  Mazarico et al. 2011 の地形線（horizon）法を再現するものではありません。外部への通信はしません。
+</footer>
+
+<script>
+(function () {
+  "use strict";
+  const OBLIQ = 1.54;                       // 月の自転軸の傾き [度]
+  const $ = (id) => document.getElementById(id);
+  const cv = $("cv"), ctx = cv.getContext("2d");
+  const W = cv.width, H = cv.height;
+
+  function maxAnnualSun(latAbs) { return Math.max(0, (90 - latAbs) + OBLIQ); }
+  function minAnnualSun(latAbs) { return Math.max(0, (90 - latAbs) - OBLIQ); }
+
+  // 断面：直径 1（-0.5..0.5）、深さ k の円弧的なお椀。y(x) ＝ 縁で 0、中心で -k。
+  function floorY(x, k) {
+    const u = Math.min(1, Math.abs(x) / 0.5);
+    return -k * (1 - u * u);                // 放物線のお椀
+  }
+
+  // 太陽は右（極側）から来て、赤道側の縁 (x=-0.5, y=0) が影を落とす、とみなす
+  // （極のクレーターでは太陽は年間を通じて赤道側から差す）。
+  // 影の境界線： y = -tan(e) * (x + 0.5)
+  function litAt(x, k, eDeg) {
+    const t = Math.tan(eDeg * Math.PI / 180);
+    const shadowLine = -t * (x + 0.5);
+    return floorY(x, k) >= shadowLine - 1e-9;
+  }
+
+  function shadowFractionOfFloor(k, eDeg) {
+    let lit = 0, n = 400;
+    for (let i = 0; i < n; i++) {
+      const x = -0.5 + (i + 0.5) / n;
+      if (litAt(x, k, eDeg)) lit++;
+    }
+    return 1 - lit / n;
+  }
+
+  function draw() {
+    const lat = parseFloat($("lat").value);
+    const k = parseFloat($("k").value);
+    const sun = parseFloat($("sun").value);
+    const latAbs = Math.abs(lat);
+    const eMax = maxAnnualSun(latAbs), eMin = minAnnualSun(latAbs);
+
+    $("latV").textContent = lat.toFixed(1) + "°";
+    $("kV").textContent = k.toFixed(2);
+    $("sunV").textContent = sun.toFixed(2) + "°";
+
+    // --- 座標変換（断面図） ---
+    const padX = 60, padTop = 60, padBot = 90;
+    const gx = (x) => padX + (x + 0.5) * (W - 2 * padX);
+    const depthScale = (H - padTop - padBot) / 0.45;
+    const gy = (y) => padTop + (-y) * depthScale;
+
+    ctx.clearRect(0, 0, W, H);
+
+    // 空
+    ctx.fillStyle = "#0a1330";
+    ctx.fillRect(0, 0, W, gy(0));
+
+    // クレーター断面のポリゴン
+    ctx.beginPath();
+    ctx.moveTo(gx(-0.5), gy(0));
+    for (let i = 0; i <= 200; i++) {
+      const x = -0.5 + i / 200;
+      ctx.lineTo(gx(x), gy(floorY(x, k)));
+    }
+    ctx.lineTo(gx(0.5), gy(0));
+    ctx.lineTo(gx(0.5), H);
+    ctx.lineTo(gx(-0.5), H);
+    ctx.closePath();
+    ctx.fillStyle = "#59617a";
+    ctx.fill();
+
+    // 影：断面の各 x で「1年でいちばん高い太陽 eMax」で影かどうか
+    for (let i = 0; i <= 200; i++) {
+      const x = -0.5 + i / 200;
+      if (!litAt(x, k, eMax)) {
+        const x2 = -0.5 + (i + 1) / 200;
+        ctx.beginPath();
+        ctx.moveTo(gx(x), gy(floorY(x, k)));
+        ctx.lineTo(gx(x2), gy(floorY(x2, k)));
+        ctx.lineTo(gx(x2), H);
+        ctx.lineTo(gx(x), H);
+        ctx.closePath();
+        ctx.fillStyle = "#16224a";
+        ctx.fill();
+      }
+    }
+
+    // いまの季節（sun スライダー）の光線：赤道側の縁から
+    function ray(eDeg, color, dash) {
+      const t = Math.tan(eDeg * Math.PI / 180);
+      ctx.save();
+      ctx.setLineDash(dash || []);
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(gx(-0.5), gy(0));
+      ctx.lineTo(gx(0.5), gy(-t * 1.0));
+      ctx.stroke();
+      ctx.restore();
+    }
+    ray(eMax, "#ffd479");                 // 1年でいちばん高い太陽
+    ray(sun, "#8fd0ff", [5, 4]);          // いまの季節
+
+    // 縁のラベル
+    ctx.fillStyle = "#cfe0ff";
+    ctx.font = "12px system-ui";
+    ctx.fillText("赤道側の縁", gx(-0.5) - 30, gy(0) - 8);
+    ctx.fillText("極側", gx(0.5) - 10, gy(0) - 8);
+    ctx.fillStyle = "#ffd479";
+    ctx.fillText("1年でいちばん高い太陽 " + eMax.toFixed(1) + "°", padX, 24);
+    ctx.fillStyle = "#8fd0ff";
+    ctx.fillText("いまの季節 " + sun.toFixed(1) + "°", padX, 40);
+
+    // --- 読み取り ---
+    const fracNow = shadowFractionOfFloor(k, sun);
+    const fracMax = shadowFractionOfFloor(k, eMax);
+    $("floorShadow").textContent = Math.round(fracNow * 100) + "%";
+    $("floorNote").textContent =
+      "（いまの季節 " + sun.toFixed(1) + "°）。1年でいちばん高い太陽 " + eMax.toFixed(1) +
+      "° でも " + Math.round(fracMax * 100) + "% が影。";
+
+    const centerLitAtMax = litAt(0, k, eMax);
+    $("annual").textContent = centerLitAtMax
+      ? "当たる（永久影ではない）"
+      : "当たらない ＝ 永久影";
+    $("annual").style.color = centerLitAtMax ? "#8fe0a0" : "#ff9db0";
+  }
+
+  ["lat", "k", "sun"].forEach((id) => $(id).addEventListener("input", draw));
+  document.querySelectorAll(".presets button").forEach((b) => {
+    b.addEventListener("click", () => {
+      $("lat").value = b.dataset.lat;
+      $("k").value = b.dataset.k;
+      $("sun").value = b.dataset.sun;
+      draw();
+    });
+  });
+  draw();
+})();
+</script>
+</body>
+</html>

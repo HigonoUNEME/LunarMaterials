@@ -1,0 +1,133 @@
+{
+ "nFrames": 24,
+ "cmap": "coolwarm",
+ "min": 25.0,
+ "max": 400.0,
+ "unit": "K",
+ "label": "1日の温度（アニメーション）",
+ "desc": "太陽直下点の動きに合わせて温度分布が変わる。「月の自転」スライダーか自動回転で進める。",
+ "source": "data/diviner_global.csv.gz",
+ "gradientCss": "linear-gradient(to right, #3a4cc0, #6788ed, #99bafe, #c8d7ef, #edd0c1, #f6a789, #e16852, #b30326)",
+ "frames": [
+  {
+   "index": 0,
+   "subsolarLon": -180.0,
+   "texture": "textures/diurnal/frame_00.png"
+  },
+  {
+   "index": 1,
+   "subsolarLon": -165.0,
+   "texture": "textures/diurnal/frame_01.png"
+  },
+  {
+   "index": 2,
+   "subsolarLon": -150.0,
+   "texture": "textures/diurnal/frame_02.png"
+  },
+  {
+   "index": 3,
+   "subsolarLon": -135.0,
+   "texture": "textures/diurnal/frame_03.png"
+  },
+  {
+   "index": 4,
+   "subsolarLon": -120.0,
+   "texture": "textures/diurnal/frame_04.png"
+  },
+  {
+   "index": 5,
+   "subsolarLon": -105.0,
+   "texture": "textures/diurnal/frame_05.png"
+  },
+  {
+   "index": 6,
+   "subsolarLon": -90.0,
+   "texture": "textures/diurnal/frame_06.png"
+  },
+  {
+   "index": 7,
+   "subsolarLon": -75.0,
+   "texture": "textures/diurnal/frame_07.png"
+  },
+  {
+   "index": 8,
+   "subsolarLon": -60.0,
+   "texture": "textures/diurnal/frame_08.png"
+  },
+  {
+   "index": 9,
+   "subsolarLon": -45.0,
+   "texture": "textures/diurnal/frame_09.png"
+  },
+  {
+   "index": 10,
+   "subsolarLon": -30.0,
+   "texture": "textures/diurnal/frame_10.png"
+  },
+  {
+   "index": 11,
+   "subsolarLon": -15.0,
+   "texture": "textures/diurnal/frame_11.png"
+  },
+  {
+   "index": 12,
+   "subsolarLon": 0.0,
+   "texture": "textures/diurnal/frame_12.png"
+  },
+  {
+   "index": 13,
+   "subsolarLon": 15.0,
+   "texture": "textures/diurnal/frame_13.png"
+  },
+  {
+   "index": 14,
+   "subsolarLon": 30.0,
+   "texture": "textures/diurnal/frame_14.png"
+  },
+  {
+   "index": 15,
+   "subsolarLon": 45.0,
+   "texture": "textures/diurnal/frame_15.png"
+  },
+  {
+   "index": 16,
+   "subsolarLon": 60.0,
+   "texture": "textures/diurnal/frame_16.png"
+  },
+  {
+   "index": 17,
+   "subsolarLon": 75.0,
+   "texture": "textures/diurnal/frame_17.png"
+  },
+  {
+   "index": 18,
+   "subsolarLon": 90.0,
+   "texture": "textures/diurnal/frame_18.png"
+  },
+  {
+   "index": 19,
+   "subsolarLon": 105.0,
+   "texture": "textures/diurnal/frame_19.png"
+  },
+  {
+   "index": 20,
+   "subsolarLon": 120.0,
+   "texture": "textures/diurnal/frame_20.png"
+  },
+  {
+   "index": 21,
+   "subsolarLon": 135.0,
+   "texture": "textures/diurnal/frame_21.png"
+  },
+  {
+   "index": 22,
+   "subsolarLon": 150.0,
+   "texture": "textures/diurnal/frame_22.png"
+  },
+  {
+   "index": 23,
+   "subsolarLon": 165.0,
+   "texture": "textures/diurnal/frame_23.png"
+  }
+ ]
+}
