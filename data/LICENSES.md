@@ -39,8 +39,9 @@
 - **`isochron_reference.csv`**：Neukum の生産関数＋編年関数から年代ごとのクレーター密度を計算した表（17 行）。
 - **`site_environment.csv`**：`moon_geology_grid.csv`（USGS）と `diviner_global`／`diviner_nighttime`（NASA/UCLA）を
   1°グリッドで結合し、正午の太陽高度・地球の仰角を幾何計算で足した派生物（64,800 行）。新規観測なし。
-  `slope_deg` 列のみ LOLA GDR 全球標高 `ldem_16.img`（PDS Geosciences Node、NASA/LRO、パブリックドメイン）
-  から傾斜を計算した派生物。基線 ≈ 1.9 km、|lat|≥85° は NaN。相対指標。
+  `slope_deg`・`elev_m` 列は LOLA GDR 全球標高 `ldem_16.img`（PDS Geosciences Node、NASA/LRO、
+  パブリックドメイン）由来の派生物。`slope_deg` は傾斜を計算（基線 ≈ 1.9 km、|lat|≥85° は NaN、相対指標）、
+  `elev_m` は同じ標高データを1°セル平均しただけ（基準球 R=1737.4km からの高さ[m]、極域も欠測なし）。
 - **`candidate_regions.csv`**：候補地域8件の緯度経度の箱と理由・弱点（手キュレーション）。座標は USGS/IAU と各ミッション文献。
 - **`lunar_pits.csv`**：溶岩チューブ天窓7件の座標・寸法。Wagner & Robinson (2014) Icarus 237 ほかの公表値を手入力（座標は事実）。
 

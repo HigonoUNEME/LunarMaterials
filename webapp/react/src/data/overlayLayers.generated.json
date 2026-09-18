@@ -51,7 +51,7 @@
   "min": 0,
   "max": 20,
   "texture": "textures/overlay_slope_deg.png",
-  "gradientCss": "linear-gradient(to right, #00224d, #213b6e, #4c546c, #6c6d72, #8d8978, #b1a570, #d8c45b, #fde737)",
+  "gradientCss": "linear-gradient(to right, #ffffcc, #feea9a, #fecd69, #fda245, #fc6831, #ea2920, #c10324, #800026)",
   "source": "data/site_environment.csv"
  },
  {
@@ -62,7 +62,18 @@
   "min": 1,
   "max": 5,
   "texture": "textures/overlay_age_index.png",
-  "gradientCss": "linear-gradient(to right, #9e0142, #e1514a, #fba55c, #fee899, #ecf7a2, #a1d9a4, #479fb3, #5e4fa2)",
+  "gradientCss": "linear-gradient(to right, #00224d, #213b6e, #4c546c, #6c6d72, #8d8978, #b1a570, #d8c45b, #fde737)",
+  "source": "data/site_environment.csv"
+ },
+ {
+  "key": "elev_m",
+  "label": "標高",
+  "unit": "m",
+  "desc": "基準球（半径1737.4km）からの高さ。低いほど青、高いほど白（地球の地形図と同じ配色）。海（低地の玄武岩平原）と高地の違いがそのまま高さの違いとして見える。",
+  "min": -8175.9,
+  "max": 9101.6,
+  "texture": "textures/overlay_elev_m.png",
+  "gradientCss": "linear-gradient(to right, #333399, #0393f9, #25d36d, #b5f08a, #dacf85, #92735e, #b7a29e, #ffffff)",
   "source": "data/site_environment.csv"
  }
 ]

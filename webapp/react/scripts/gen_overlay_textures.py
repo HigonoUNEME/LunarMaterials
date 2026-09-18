@@ -31,8 +31,16 @@ os.makedirs(TEX_OUT, exist_ok=True)
 
 UPSCALE = 4  # 360x180 の1度グリッド -> 1440x720（滑らかに見せるための補間。データ自体は1度分解能のまま）
 
-# Phase2：site_environment.csv の5指標。極域日照（lola_polar_illumination）は範囲が
+# Phase2：site_environment.csv の6指標。極域日照（lola_polar_illumination）は範囲が
 # |緯度|>=83°の細い帯だけで全球図には向かないため対象外（極域は shadow_sim.html 側で扱う）。
+#
+# 配色メモ（2026-09-18、見た目の指摘を受けて変更）：
+#  - slope_deg は元 cividis（色覚バリアフリー向けの地味な単色系）だと細かい起伏がザラついて
+#    見えるだけで「傾斜が急」という意味が伝わりにくかったので、危険度が直感的にわかる
+#    YlOrRd（平ら=薄い黄、急=赤）に変更。
+#  - age_index は元 Spectral（虹色の発散配色）だと1〜5という「古い→新しい」の順序が
+#    直感的に読めなかった（虹色は「種類の違い」を表すには向くが「連続的な順序」には不向き）ので、
+#    単色で明るさが単調に変わる cividis（暗い紫〜明るい黄）に変更。
 LAYERS = [
     # 温度系は「熱い=赤、冷たい=青」の直感に合わせて coolwarm（発散配色）にする。
     dict(key="temp_amp_K", label="1日の温度差", unit="K", cmap="coolwarm", vmin=None, vmax=None,
@@ -43,10 +51,13 @@ LAYERS = [
          desc="正午に太陽がどれだけ高く昇るか（=90-|緯度|の近似）。発電量と熱負荷の代理。"),
     dict(key="earth_elev_deg", label="地球の仰角", unit="°", cmap="RdBu_r", vmin=-90, vmax=90,
          desc="正＝表側（地球が見える・通信できる）、負＝裏側（地球が見えない・電波が静か）。"),
-    dict(key="slope_deg", label="全球の傾斜", unit="°", cmap="cividis", vmin=0, vmax=20,
+    dict(key="slope_deg", label="全球の傾斜", unit="°", cmap="YlOrRd", vmin=0, vmax=20,
          desc="地面の傾き。小さいほど平ら。|緯度|≥85°は透明（欠測。極は別データで見る）。"),
-    dict(key="age_index", label="地質年代", unit="", cmap="Spectral", vmin=1, vmax=5,
+    dict(key="age_index", label="地質年代", unit="", cmap="cividis", vmin=1, vmax=5,
          desc="USGS統合地質図の相対年代。1=最古、5=最新。海（新しい）と陸（古い）の違いが出る。"),
+    dict(key="elev_m", label="標高", unit="m", cmap="terrain", vmin=None, vmax=None,
+         desc="基準球（半径1737.4km）からの高さ。低いほど青、高いほど白（地球の地形図と同じ配色）。"
+              "海（低地の玄武岩平原）と高地の違いがそのまま高さの違いとして見える。"),
 ]
 
 

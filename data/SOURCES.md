@@ -178,10 +178,12 @@ Python 3.12 ＋ numpy / pandas / geopandas、7-Zip 26.x。詳細な判断根拠�
 - **列**：`区分, age_index, relative_age, temp_max_K, temp_min_K, temp_amp_K, night_min_K,
   noon_sun_elev_deg（=90−|lat|）, night_length_days（会合月の半分≒14.77日。|lat|>85° は NaN）,
   earth_elev_deg（=90 − 角距離(sub-Earth点(0,0))。正＝表側、負＝裏側）,
-  slope_deg（全球の傾斜。下記の LDEM_16 由来。|lat|≥85° は NaN）`。
+  slope_deg（全球の傾斜。下記の LDEM_16 由来。|lat|≥85° は NaN）,
+  elev_m（標高。下記の LDEM_16 由来。基準球 R=1737.4km からの高さ[m]、極域含め欠測なし）`。
 - **生成**：`tools/build_site_environment.py --write`（`区分`〜`earth_elev_deg`）→
-  `tools/build_global_slope.py --write`（`slope_deg` を追記）。
-- **`slope_deg` の元データ（2026-09-07 追加・requirements_v3.3 I6。**唯一のダウンロードを伴う列**）**：
+  `tools/build_global_slope.py --write`（`slope_deg` を追記）→
+  `tools/build_global_elevation.py --write`（`elev_m` を追記。2026-09-18 追加）。
+- **`slope_deg`・`elev_m` の元データ（2026-09-07 追加・requirements_v3.3 I6。**唯一のダウンロードを伴う列**）**：
   LOLA GDR 全球標高 `ldem_16.img`（16 pix/度・5760×2880・LSB int16・標高[m]=DN×0.5、
   等緯度経度・中心経度180°、33 MB）
   https://pds-geosciences.wustl.edu/lro/lro-l-lola-3-rdr-v1/lrolol_1xxx/data/lola_gdr/cylindrical/img/ldem_16.img
@@ -189,6 +191,9 @@ Python 3.12 ＋ numpy / pandas / geopandas、7-Zip 26.x。詳細な判断根拠�
   atan(|∇z|) で求め、16×16 画素を 1°セルに平均。基線 ≈ 1.9 km。極域の傾斜は
   `lola_polar_illumination.csv` の `slope_deg`（240m 基線・極ステレオ投影）を使う。
   海の平均 ≈ 1.0°／陸の平均 ≈ 5.9°（＝「海は平ら」を数値で裏づけ）。「相対的な起伏の指標」。
+  `elev_m` は同じ標高データをそのまま 1°セル平均しただけ（傾斜と違い緯度微分をしないので極域も
+  欠測にしていない）。海の平均 ≈ −2117m／陸の平均 ≈ −306m／全体の最小 ≈ −8176m（南極エイトケン盆地
+  付近）・最大 ≈ +9102m。
 - **検証**（同スクリプト）：Apollo 11 `earth_elev ≈ +66°`／Chang'e 4（裏側）`earth_elev ≈ −44°`／
   Shackleton `earth_elev ≈ 0°・temp_amp ≈ 150K`／赤道 `temp_amp ≈ 290–300K`。
   物理チェック（赤道で日較差大／裏側で earth_elev 負／表側で正）をアサーションで確認。

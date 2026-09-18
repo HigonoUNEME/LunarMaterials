@@ -16,7 +16,8 @@ const LAYER_FIELD: Partial<Record<string, keyof SiteEnv>> = {
   noon_sun_elev_deg: 'noonSun',
   earth_elev_deg: 'earthElev',
   slope_deg: 'slopeDeg',
-  age_index: 'ageIndex'
+  age_index: 'ageIndex',
+  elev_m: 'elevM'
 };
 
 /** 静的なデータ層（1日の温度アニメーション以外）の、lat/lon にいちばん近いセルの値。

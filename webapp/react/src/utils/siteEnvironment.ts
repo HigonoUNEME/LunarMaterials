@@ -18,9 +18,10 @@ export interface SiteEnv {
   terrain: string;      // 海 / 陸
   slopeDeg: number | null;  // 全球の傾斜 [度]（|緯度|≥85° は欠測）
   ageIndex: number | null;  // 相対地質年代 1(古)〜5(新)
+  elevM: number;        // 標高 [m]（基準球 R=1737.4km からの高さ。マイナス＝低地）
 }
 
-type EnvCell = [number, number, number, number, number, number, string, number | null, number | null];
+type EnvCell = [number, number, number, number, number, number, string, number | null, number | null, number];
 const STEP: number = (raw as { step: number }).step;
 const CELLS = (raw as unknown as { cells: EnvCell[] }).cells;
 
@@ -50,7 +51,7 @@ export function nearestEnv(lat: number, lon: number): SiteEnv | null {
   return {
     lat: best[0], lon: best[1], tempAmp: best[2], nightMin: best[3],
     noonSun: best[4], earthElev: best[5], terrain: best[6],
-    slopeDeg: best[7], ageIndex: best[8]
+    slopeDeg: best[7], ageIndex: best[8], elevM: best[9]
   };
 }
 
