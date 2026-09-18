@@ -4,7 +4,7 @@
  "min": 25.0,
  "max": 400.0,
  "unit": "K",
- "label": "1日の温度（アニメーション）",
+ "label": "1日の温度",
  "desc": "太陽直下点の動きに合わせて温度分布が変わる。「月の自転」スライダーか自動回転で進める。",
  "source": "data/diviner_global.csv.gz",
  "gradientCss": "linear-gradient(to right, #3a4cc0, #6788ed, #99bafe, #c8d7ef, #edd0c1, #f6a789, #e16852, #b30326)",

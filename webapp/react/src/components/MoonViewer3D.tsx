@@ -37,7 +37,7 @@ const DIURNAL = diurnalFramesMeta as DiurnalMeta;
 const DIURNAL_KEY = 'diurnal_temp';
 
 // 太陽は世界座標で固定し、月本体を自転させることで昼夜が移り変わるようにする（旧「太陽光照射角」
-// スライダーは廃止し、自転角ひとつに統一：須藤「太陽光照射角がわかりにくい、自転でいいのでは」への対応）。
+// スライダーは廃止し、自転角ひとつに統一：太陽光照射角がわかりにくいという指摘への対応）。
 // この角度は sunLight の位置 (cos, 1.5, sin)*12 の式の元になった角度をそのまま定数化したもの
 // （自転角0のときの見え方を、以前のデフォルト sunAngle=45 と揃えるための値）。
 const FIXED_SUN_WORLD_DEG = 45;
@@ -57,7 +57,7 @@ function nearestDiurnalFrameIndexForRotation(rotationDeg: number): number {
   return (((Math.round((lon + 180) / (360 / n)) % n) + n) % n);
 }
 
-// 常設ピンを廃止し、カーソルを合わせたときだけ「近くの地点」の名前を出す（須藤の要望）。
+// 常設ピンを廃止し、カーソルを合わせたときだけ「近くの地点」の名前を出す（要望への対応）。
 // これより離れていたら「地点なし」＝緯度経度だけを表示する。
 const FEATURE_HOVER_THRESHOLD_DEG = 3;
 
@@ -90,7 +90,7 @@ const CATEGORY_EMOJI: Record<string, string> = {
   resources: '💧 極域資源・水氷候補'
 };
 
-/** カーソルを合わせた地点の情報。常設ピンの代わりにホバーで出す（須藤の要望）。 */
+/** カーソルを合わせた地点の情報。常設ピンの代わりにホバーで出す（要望への対応）。 */
 interface HoverInfo {
   lat: number;
   lon: number;
@@ -483,7 +483,7 @@ export const MoonViewer3D: React.FC<MoonViewer3DProps> = ({
       () => console.warn('太陽テクスチャの読み込みに失敗しました。')
     );
 
-    // 太陽まわりのグロー（須藤「太陽をもう少し目立たせても」への対応）。実際の球体の大きさは
+    // 太陽まわりのグロー（太陽をもう少し目立たせたいという要望への対応）。実際の球体の大きさは
     // そのまま、加算合成のふわっとした光の輪を一回り大きく重ねるだけ＝実際の見かけの大きさを
     // 誇張せずに見つけやすくする。常にカメラを向く Sprite なので、球体と違って必ず丸く見える。
     const sunGlowTexture = createSunGlowTexture();
@@ -524,7 +524,8 @@ export const MoonViewer3D: React.FC<MoonViewer3DProps> = ({
       // 選択地点へのトゥイーン中は、寄せた視点がずれないよう自転も止める。
       const focus0 = focusRef.current;
       if (settingsRef.current.autoRotate && !focus0) {
-        const spinRad = THREE.MathUtils.degToRad(SPIN_DEG_PER_SEC_AT_1X * Math.max(0.3, settingsRef.current.rotationSpeed)) * dt;
+        // rotationSpeed はスライダーで 0.1〜3 の範囲に直接調整できるので、ここでの下駄（旧 0.3）は外す。
+        const spinRad = THREE.MathUtils.degToRad(SPIN_DEG_PER_SEC_AT_1X * Math.max(0.05, settingsRef.current.rotationSpeed)) * dt;
         moonSpinGroup.rotation.y += spinRad;
 
         // スライダー表示（自転角）を追従させる。毎フレームだと重いので間引く
@@ -949,21 +950,36 @@ export const MoonViewer3D: React.FC<MoonViewer3DProps> = ({
         </button>
       </div>
 
-      {/* 自転（＝1日の時刻）スライダー。太陽の向きは固定で、月を回すことで昼夜が移り変わる */}
+      {/* 自転（＝1日の時刻）スライダー＋自転の速さ。太陽の向きは固定で、月を回すことで昼夜が移り変わる */}
       <div className="absolute bottom-4 left-4 bg-slate-900/85 backdrop-blur-md border border-slate-700/70 px-3.5 py-2.5 rounded-2xl shadow-xl flex items-center gap-3 text-xs text-slate-300 pointer-events-auto">
         <RotateCw className="w-4 h-4 text-amber-400 shrink-0" />
-        <div className="flex flex-col gap-1">
-          <div className="flex justify-between items-center text-[10px] text-slate-400">
-            <span>月の自転（1日の時刻）</span>
-            <span className="font-mono text-amber-300">{Math.round(settings.moonRotationDeg)}°</span>
+        <div className="flex flex-col gap-2">
+          <div className="flex flex-col gap-1">
+            <div className="flex justify-between items-center text-[10px] text-slate-400">
+              <span>月の自転（1日の時刻）</span>
+              <span className="font-mono text-amber-300">{Math.round(settings.moonRotationDeg)}°</span>
+            </div>
+            <input
+              id="slider-moon-rotation"
+              type="range" min="0" max="360" step="5"
+              value={settings.moonRotationDeg}
+              onChange={(e) => onUpdateSettings({ moonRotationDeg: Number(e.target.value) })}
+              className="w-28 sm:w-36 h-1.5 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-amber-400"
+            />
           </div>
-          <input
-            id="slider-moon-rotation"
-            type="range" min="0" max="360" step="5"
-            value={settings.moonRotationDeg}
-            onChange={(e) => onUpdateSettings({ moonRotationDeg: Number(e.target.value) })}
-            className="w-28 sm:w-36 h-1.5 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-amber-400"
-          />
+          <div className="flex flex-col gap-1">
+            <div className="flex justify-between items-center text-[10px] text-slate-400">
+              <span>自転の速さ（自動回転中）</span>
+              <span className="font-mono text-amber-300">×{settings.rotationSpeed.toFixed(1)}</span>
+            </div>
+            <input
+              id="slider-rotation-speed"
+              type="range" min="0.1" max="3" step="0.1"
+              value={settings.rotationSpeed}
+              onChange={(e) => onUpdateSettings({ rotationSpeed: Number(e.target.value) })}
+              className="w-28 sm:w-36 h-1.5 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-amber-400"
+            />
+          </div>
         </div>
       </div>
 

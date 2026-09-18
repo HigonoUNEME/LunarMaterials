@@ -67,7 +67,7 @@ def main() -> None:
 
     meta = {
         "nFrames": N_FRAMES, "cmap": CMAP, "min": VMIN, "max": VMAX,
-        "unit": "K", "label": "1日の温度（アニメーション）",
+        "unit": "K", "label": "1日の温度",
         "desc": "太陽直下点の動きに合わせて温度分布が変わる。「月の自転」スライダーか自動回転で進める。",
         "source": "data/diviner_global.csv.gz",
         "gradientCss": _gradient_css(CMAP),
