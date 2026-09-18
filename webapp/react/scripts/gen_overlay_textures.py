@@ -27,9 +27,18 @@ DATA = os.path.join(ROOT, "data")
 REACT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 TEX_OUT = os.path.join(REACT, "public", "textures")
 JSON_OUT = os.path.join(REACT, "src", "data", "overlayLayers.generated.json")
+CACHE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "_cache")
 os.makedirs(TEX_OUT, exist_ok=True)
 
 UPSCALE = 4  # 360x180 の1度グリッド -> 1440x720（滑らかに見せるための補間。データ自体は1度分解能のまま）
+
+# age_index だけ、site_environment.csv（1度グリッド）ではなく専用の0.25度グリッドを使う
+# （2026-09-18、「地質年代の解像度を上げたい」への対応）。tools/build_geology_grid.py --step 0.25 で
+# 作る中間生成物（64MB超）。data/ には置かず（配布物ではないため）_cache/ に置きコミットしない。
+# 無ければこのスクリプトが自動生成を促す（USGSのGISデータ224MBを毎回落とすのは重いので、
+# 手動で1回だけ tools/build_geology_grid.py を実行してもらう）。
+AGE_FINE_GRID = os.path.join(CACHE, "moon_geology_grid_fine.csv")
+AGE_FINE_UPSCALE = 2  # 元データがすでに0.25度=1度グリッドの4倍細かいので、補間の倍率はここでは控えめでよい
 
 # Phase2：site_environment.csv の6指標。極域日照（lola_polar_illumination）は範囲が
 # |緯度|>=83°の細い帯だけで全球図には向かないため対象外（極域は shadow_sim.html 側で扱う）。
@@ -75,18 +84,19 @@ def _grid(df: pd.DataFrame, col: str) -> np.ndarray:
     return g.values
 
 
-def _wrap_zoom(arr: np.ndarray, order: int, mode: str) -> np.ndarray:
+def _wrap_zoom(arr: np.ndarray, order: int, mode: str, upscale: int) -> np.ndarray:
     """経度方向の周期性を考慮して zoom する（継ぎ目が出ないよう両端を回り込ませる）。"""
     n_lat, n_lon = arr.shape
     pad = 3
     padded = np.concatenate([arr[:, -pad:], arr, arr[:, :pad]], axis=1)
-    up_padded = zoom(padded, (UPSCALE, UPSCALE), order=order, mode=mode)
-    crop = pad * UPSCALE
-    return up_padded[:, crop:crop + n_lon * UPSCALE]
+    up_padded = zoom(padded, (upscale, upscale), order=order, mode=mode)
+    crop = pad * upscale
+    return up_padded[:, crop:crop + n_lon * upscale]
 
 
-def _to_rgba_png(grid: np.ndarray, cmap_name: str, vmin: float, vmax: float, path: str) -> None:
-    """1度グリッドを補間して滑らかにし、カラーマップで着色して PNG にする。
+def _to_rgba_png(grid: np.ndarray, cmap_name: str, vmin: float, vmax: float, path: str,
+                  upscale: int = UPSCALE) -> None:
+    """グリッドを補間して滑らかにし、カラーマップで着色して PNG にする。
     NaN（欠測）は別扱い：cubic 補間に NaN を渡すと周辺まで壊れるので、
     値は最近傍で埋めてから補間し、透明度（アルファ）だけ NaN マスクの最近傍拡大で決める。
     """
@@ -96,12 +106,12 @@ def _to_rgba_png(grid: np.ndarray, cmap_name: str, vmin: float, vmax: float, pat
         # 欠測は全体平均で仮埋め（cubic 補間が NaN で壊れるのを防ぐだけが目的。表示はアルファ0で消す）
         filled = np.where(nan_mask, np.nanmean(grid), grid)
 
-    up = _wrap_zoom(filled, order=3, mode="nearest")
+    up = _wrap_zoom(filled, order=3, mode="nearest", upscale=upscale)
     norm = np.clip((up - vmin) / (vmax - vmin), 0, 1)
     rgba = (matplotlib.colormaps[cmap_name](norm) * 255).astype(np.uint8)  # (H, W, 4)
 
     if nan_mask.any():
-        up_mask = _wrap_zoom(nan_mask.astype(np.float64), order=0, mode="nearest") > 0.5
+        up_mask = _wrap_zoom(nan_mask.astype(np.float64), order=0, mode="nearest", upscale=upscale) > 0.5
         rgba[up_mask, 3] = 0
 
     from PIL import Image
@@ -120,24 +130,43 @@ def _gradient_css(cmap_name: str, n: int = 8) -> str:
 
 def main() -> None:
     df = pd.read_csv(os.path.join(DATA, "site_environment.csv"))
+
+    age_fine = None
+    if os.path.exists(AGE_FINE_GRID):
+        age_fine = pd.read_csv(AGE_FINE_GRID)
+        print(f"age_index: 高解像度グリッドを使用（{AGE_FINE_GRID}、{len(age_fine)}点）")
+    else:
+        print(f"age_index: 高解像度グリッドが無いため site_environment.csv の1度グリッドで代用します。\n"
+              f"  上げたい場合は tools/build_geology_grid.py --step 0.25 "
+              f"--out {AGE_FINE_GRID} --write を実行してください（要 USGS GISデータ224MB）。")
+
     meta = []
     for layer in LAYERS:
         col = layer["key"]
-        grid = _grid(df, col)
+        upscale = UPSCALE
+        source = "data/site_environment.csv"
+        if col == "age_index" and age_fine is not None:
+            grid = _grid(age_fine, col)
+            upscale = AGE_FINE_UPSCALE
+            source = "USGS Unified Geologic Map of the Moon（0.25°グリッド。data/moon_geology_grid.csv " \
+                      "と同じ元データをtools/build_geology_grid.py --step 0.25で再処理した中間生成物）"
+        else:
+            grid = _grid(df, col)
         vmin = layer["vmin"] if layer["vmin"] is not None else float(np.nanmin(grid))
         vmax = layer["vmax"] if layer["vmax"] is not None else float(np.nanmax(grid))
         out_path = os.path.join(TEX_OUT, f"overlay_{col}.png")
-        _to_rgba_png(grid, layer["cmap"], vmin, vmax, out_path)
+        _to_rgba_png(grid, layer["cmap"], vmin, vmax, out_path, upscale=upscale)
         n_nan = int(np.isnan(grid).sum())
         print(f"wrote {out_path}  ({os.path.getsize(out_path)/1024:.0f} KB)  "
-              f"range [{vmin:.1f}, {vmax:.1f}] {layer['unit']}  欠測 {n_nan} セル")
+              f"range [{vmin:.1f}, {vmax:.1f}] {layer['unit']}  欠測 {n_nan} セル  "
+              f"grid {grid.shape}")
         meta.append({
             "key": col, "label": layer["label"], "unit": layer["unit"],
             "desc": layer["desc"],
             "min": round(vmin, 1), "max": round(vmax, 1),
             "texture": f"textures/overlay_{col}.png",
             "gradientCss": _gradient_css(layer["cmap"]),
-            "source": "data/site_environment.csv",
+            "source": source,
         })
 
     with open(JSON_OUT, "w", encoding="utf-8") as f:

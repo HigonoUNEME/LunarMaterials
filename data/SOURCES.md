@@ -128,6 +128,15 @@ Python 3.12 ＋ numpy / pandas / geopandas、7-Zip 26.x。詳細な判断根拠�
   陸は Pre-Nectarian〜Imbrian に広く分布。面積重み平均 age_index は 海 3.16・陸 2.38 で、
   **海のほうが系統的に若い**（Hiesinger らの海の玄武岩年代 3.1–3.9 Ga、LHB 後の高地地殻と整合）。
 - **用途**：ステップ2/6 で、クレーターの数から推定した「海は新しい」を USGS 公式地質図と**答え合わせ**する。
+- **入口Webアプリの「地質年代」レイヤー用の高解像度版（2026-09-18 追加）**：上と同じ元データ
+  （`GeoUnits.shp`）を `tools/build_geology_grid.py --step 0.25` で 0.25°グリッド（720×1440 =
+  1,036,800 点）に再処理したもの。1°グリッドだと個々のクレーターが単なる四角いブロックに
+  潰れて見づらかった（「地質年代の色味がちょっと」という指摘）ため、表示専用の中間生成物として
+  `webapp/react/scripts/_cache/moon_geology_grid_fine.csv`（64MB超）を作り、
+  `webapp/react/scripts/gen_overlay_textures.py` がここから直接PNGテクスチャを焼く。
+  配布データ本体（`data/moon_geology_grid.csv`・`site_environment.csv`）は従来どおり1°グリッドのまま
+  （面積重み海率 15.8%で1°版の15.7%と整合、再現性を確認済み）。中間生成物なので `data/` ではなく
+  `_cache/` に置き、リポジトリにはコミットしない（焼き上がったPNGだけを配布する）。
 
 ---
 

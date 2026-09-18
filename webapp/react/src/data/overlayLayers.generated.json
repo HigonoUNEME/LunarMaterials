@@ -63,7 +63,7 @@
   "max": 5,
   "texture": "textures/overlay_age_index.png",
   "gradientCss": "linear-gradient(to right, #00224d, #213b6e, #4c546c, #6c6d72, #8d8978, #b1a570, #d8c45b, #fde737)",
-  "source": "data/site_environment.csv"
+  "source": "USGS Unified Geologic Map of the Moon（0.25°グリッド。data/moon_geology_grid.csv と同じ元データをtools/build_geology_grid.py --step 0.25で再処理した中間生成物）"
  },
  {
   "key": "elev_m",
