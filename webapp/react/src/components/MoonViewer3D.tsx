@@ -207,10 +207,17 @@ export const MoonViewer3D: React.FC<MoonViewer3DProps> = ({
   const focusRef = useRef<{ az: number; pol: number; dist: number } | null>(null);
   // クリックとドラッグを区別するためのポインタ押下位置
   const pointerDownRef = useRef<{ x: number; y: number; t: number } | null>(null);
+  // 自転中もマウス直下の地点を追従させるため、最後にポインタがあった画面座標を animate ループから読む
+  const lastPointerClientRef = useRef<{ x: number; y: number } | null>(null);
+  // クリックして立てたピンの情報。animate ループ（クロージャ）から最新値を読むための ref
+  const pinnedInfoRef = useRef<HoverInfo | null>(null);
+  const pinMarkerRef = useRef<THREE.Group | null>(null); // クリックした地点に立てる目印（moonSpinGroup の子）
 
   // HUD & Hover state。常設ピンは廃止したので、カーソルを合わせた地点の情報をまとめて持つ
   const [hoverInfo, setHoverInfo] = useState<HoverInfo | null>(null);
   const [tooltipPos, setTooltipPos] = useState<{ x: number; y: number } | null>(null);
+  // クリックして立てたピンの情報（ホバーと違い、マウスを離しても消えない）
+  const [pinnedInfo, setPinnedInfo] = useState<HoverInfo | null>(null);
 
   // settings を animate ループの外（クロージャ）から読むための ref
   const settingsRef = useRef(settings);
@@ -218,6 +225,54 @@ export const MoonViewer3D: React.FC<MoonViewer3DProps> = ({
   // 自転アニメーション中、スライダー表示を追従させるために animate ループから呼ぶ（常に最新を指す）
   const onUpdateSettingsRef = useRef(onUpdateSettings);
   onUpdateSettingsRef.current = onUpdateSettings;
+
+  // features は props なので毎レンダー変わりうる。animate ループ（1回だけ張るクロージャ）から
+  // 常に最新を読めるよう ref に写す（settingsRef と同じ考え方）。
+  const featuresRef = useRef(features);
+  featuresRef.current = features;
+
+  /** 月面ローカルの緯度経度における、現在のデータ層の値を求める（表示中でなければ null）。
+   *  ホバー表示・クリックで立てたピンの両方から、同じ計算式で使う。 */
+  const computeLayerValueAt = (lat: number, lon: number): HoverInfo['layerValue'] => {
+    const s = settingsRef.current;
+    if (!s.showDataLayer) return null;
+    if (s.dataLayerKey === DIURNAL_KEY) {
+      const lookup = diurnalLookupRef.current;
+      if (!lookup) return null;
+      const rotationDeg = moonSpinGroupRef.current
+        ? THREE.MathUtils.radToDeg(moonSpinGroupRef.current.rotation.y)
+        : s.moonRotationDeg;
+      const v = diurnalValueAt(lookup, lat, lon, subsolarLonLocal(rotationDeg));
+      return v !== null ? { label: DIURNAL.label, unit: DIURNAL.unit, value: v } : null;
+    }
+    const v = staticLayerValueAt(s.dataLayerKey, lat, lon);
+    if (v === null) return null;
+    const layer = DATA_LAYERS.find((l) => l.key === s.dataLayerKey);
+    return layer ? { label: layer.label, unit: layer.unit, value: v } : null;
+  };
+
+  /** 画面座標(clientX/Y)から、月面と交わった点の緯度経度・近くの既知地点・データ層の値をまとめて求める。
+   *  ホバー表示（自転に追従させるため毎フレーム）とクリック選択・ピン設置の両方から使う共通ロジック。
+   *  animate ループより前に定義することで、そちらのクロージャからも直接参照できるようにしている。 */
+  const getHoverInfoAtClient = (clientX: number, clientY: number): HoverInfo | null => {
+    const rect = canvasRef.current?.getBoundingClientRect();
+    if (!rect || !cameraRef.current || !moonMeshRef.current) return null;
+    const ndc = new THREE.Vector2(
+      ((clientX - rect.left) / rect.width) * 2 - 1,
+      -((clientY - rect.top) / rect.height) * 2 + 1
+    );
+    const rc = new THREE.Raycaster();
+    rc.setFromCamera(ndc, cameraRef.current);
+    const hits = rc.intersectObject(moonMeshRef.current);
+    if (!hits.length) return null;
+    const localPoint = moonSpinGroupRef.current
+      ? moonSpinGroupRef.current.worldToLocal(hits[0].point.clone())
+      : hits[0].point;
+    const { lat, lon } = vector3ToLatLong(localPoint);
+    const feature = nearestFeature(featuresRef.current, lat, lon);
+    const layerValue = computeLayerValueAt(lat, lon);
+    return { lat: +lat.toFixed(2), lon: +lon.toFixed(2), feature, layerValue };
+  };
 
   /** データ層用テクスチャを読み込む（キャッシュ付き）。同じ URL を2回読みに行かない。 */
   const loadTexture = (url: string): Promise<THREE.Texture> => {
@@ -424,6 +479,27 @@ export const MoonViewer3D: React.FC<MoonViewer3DProps> = ({
     moonSpinGroup.add(gridGroup);
     gridMeshRef.current = gridGroup;
 
+    // クリックした地点に立てる目印（要望：「クリックしてある地点にピンを立てて、データを表示する」）。
+    // moonSpinGroup の子にすることで、自転しても地点に張り付いたまま一緒に回る。
+    const pinGroup = new THREE.Group();
+    const pinColor = 0xfacc15;
+    const pinStickH = 0.16;
+    const pinNeedle = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.012, 0.012, pinStickH, 8),
+      new THREE.MeshBasicMaterial({ color: pinColor, toneMapped: false })
+    );
+    pinNeedle.position.y = pinStickH / 2;
+    const pinHead = new THREE.Mesh(
+      new THREE.SphereGeometry(0.045, 14, 14),
+      new THREE.MeshBasicMaterial({ color: pinColor, toneMapped: false })
+    );
+    pinHead.position.y = pinStickH;
+    pinGroup.add(pinNeedle, pinHead);
+    pinGroup.renderOrder = 5; // データ層・グリッドより手前に描く
+    pinGroup.visible = false;
+    moonSpinGroup.add(pinGroup);
+    pinMarkerRef.current = pinGroup;
+
     // Lights（太陽は世界座標で固定。動くのは月本体のほう＝自転で昼夜が移り変わる）
     const fixedSunRad = (FIXED_SUN_WORLD_DEG * Math.PI) / 180;
     const fixedSunDir = new THREE.Vector3(Math.cos(fixedSunRad) * 12, 1.5, Math.sin(fixedSunRad) * 12);
@@ -511,6 +587,7 @@ export const MoonViewer3D: React.FC<MoonViewer3DProps> = ({
     const spherical = new THREE.Spherical();
     let lastT = 0;
     let rotationSyncAccum = 0; // スライダー表示への書き戻しを間引くための積算時間
+    let hoverSyncAccum = 0; // ホバー・ピンのデータ再計算を間引くための積算時間
     const earthBaseDir = latLongToVector3(0, 0, SKY_R); // 潮汐固定＝月面「表側中心」が向く方向（自転角0のときの地球の位置）
 
     const animate = () => {
@@ -571,6 +648,34 @@ export const MoonViewer3D: React.FC<MoonViewer3DProps> = ({
         }
       }
 
+      // マウスが止まっていても、月本体のほうが自転で動くので、直下の地点は変わり続ける。
+      // pointermove イベントだけに頼ると自転中は表示が古いままになる（「ついてこない」指摘への対応）。
+      // 間引きながら毎フレーム再計算し、ホバー中のカーソル位置・ピン留めした地点の両方を追従させる。
+      hoverSyncAccum += dt;
+      if (hoverSyncAccum > 0.08) {
+        hoverSyncAccum = 0;
+        const lp = lastPointerClientRef.current;
+        if (lp) {
+          const info = getHoverInfoAtClient(lp.x, lp.y);
+          setHoverInfo((prev) => {
+            if (!info) return prev === null ? prev : null;
+            if (prev && prev.lat === info.lat && prev.lon === info.lon &&
+                prev.feature === info.feature &&
+                prev.layerValue?.value === info.layerValue?.value) return prev;
+            return info;
+          });
+        }
+        const pinned = pinnedInfoRef.current;
+        if (pinned) {
+          const lv = computeLayerValueAt(pinned.lat, pinned.lon);
+          if (lv?.value !== pinned.layerValue?.value || lv?.label !== pinned.layerValue?.label) {
+            const updated = { ...pinned, layerValue: lv };
+            pinnedInfoRef.current = updated;
+            setPinnedInfo(updated);
+          }
+        }
+      }
+
       controls.update();
 
       // ズームに応じて月面写真の解像度を上げる（初期表示は2Kのまま、寄ったときだけ4K/8Kを読みに行く）
@@ -625,6 +730,12 @@ export const MoonViewer3D: React.FC<MoonViewer3DProps> = ({
       sunMesh.material.dispose();
       sunGlowTexture.dispose();
       sunGlow.material.dispose();
+      pinGroup.children.forEach((c) => {
+        if (c instanceof THREE.Mesh) {
+          c.geometry.dispose();
+          (c.material as THREE.Material).dispose();
+        }
+      });
       textureCacheRef.current.forEach((p) => { p.then((tex) => tex.dispose()).catch(() => {}); });
       textureCacheRef.current.clear();
       diurnalTexturesRef.current?.forEach((tex) => tex.dispose());
@@ -702,82 +813,52 @@ export const MoonViewer3D: React.FC<MoonViewer3DProps> = ({
     focusRef.current = { az: sph.theta, pol: sph.phi, dist: FOCUS_DISTANCE };
   }, [selectedFeature]);
 
-  // --- ポインタ操作。回転・ズームは OrbitControls。ここでは hover とクリック選択だけ ---
-  const raycast = (clientX: number, clientY: number) => {
-    const rect = canvasRef.current?.getBoundingClientRect();
-    if (!rect || !cameraRef.current) return null;
-    const ndc = new THREE.Vector2(
-      ((clientX - rect.left) / rect.width) * 2 - 1,
-      -((clientY - rect.top) / rect.height) * 2 + 1
-    );
-    const rc = new THREE.Raycaster();
-    rc.setFromCamera(ndc, cameraRef.current);
-    return rc;
-  };
-
-  /** レイキャストが月面と交わった点を、自転を打ち消した月面ローカルの緯度経度にする。
-   *  常設ピンを廃止したので、ここが唯一の「地図上の位置」を得る入口（ホバー・クリック共通）。 */
-  const latLonAt = (rc: THREE.Raycaster): { lat: number; lon: number } | null => {
-    if (!moonMeshRef.current) return null;
-    const hits = rc.intersectObject(moonMeshRef.current);
-    if (!hits.length) return null;
-    const localPoint = moonSpinGroupRef.current
-      ? moonSpinGroupRef.current.worldToLocal(hits[0].point.clone())
-      : hits[0].point;
-    return vector3ToLatLong(localPoint);
-  };
-
+  // --- ポインタ操作。回転・ズームは OrbitControls。ここでは hover とクリック選択・ピン設置だけ ---
   const handlePointerMove = (e: React.PointerEvent<HTMLCanvasElement>) => {
-    const rc = raycast(e.clientX, e.clientY);
-    const hit = rc && latLonAt(rc);
-    if (!hit) {
-      setHoverInfo(null);
-      return;
-    }
-    const { lat, lon } = hit;
-    const feature = nearestFeature(features, lat, lon);
-
-    let layerValue: HoverInfo['layerValue'] = null;
-    const s = settingsRef.current;
-    if (s.showDataLayer) {
-      if (s.dataLayerKey === DIURNAL_KEY) {
-        const lookup = diurnalLookupRef.current;
-        if (lookup) {
-          const rotationDeg = moonSpinGroupRef.current
-            ? THREE.MathUtils.radToDeg(moonSpinGroupRef.current.rotation.y)
-            : s.moonRotationDeg;
-          const v = diurnalValueAt(lookup, lat, lon, subsolarLonLocal(rotationDeg));
-          if (v !== null) layerValue = { label: DIURNAL.label, unit: DIURNAL.unit, value: v };
-        }
-      } else {
-        const v = staticLayerValueAt(s.dataLayerKey, lat, lon);
-        if (v !== null) {
-          const layer = DATA_LAYERS.find((l) => l.key === s.dataLayerKey);
-          if (layer) layerValue = { label: layer.label, unit: layer.unit, value: v };
-        }
-      }
-    }
-
-    setHoverInfo({ lat: +lat.toFixed(2), lon: +lon.toFixed(2), feature, layerValue });
-    setTooltipPos({ x: e.clientX, y: e.clientY });
+    lastPointerClientRef.current = { x: e.clientX, y: e.clientY };
+    const info = getHoverInfoAtClient(e.clientX, e.clientY);
+    setHoverInfo(info);
+    setTooltipPos(info ? { x: e.clientX, y: e.clientY } : null);
   };
 
   const handlePointerDown = (e: React.PointerEvent<HTMLCanvasElement>) => {
     pointerDownRef.current = { x: e.clientX, y: e.clientY, t: performance.now() };
   };
 
+  const updatePinnedInfo = (info: HoverInfo | null) => {
+    pinnedInfoRef.current = info;
+    setPinnedInfo(info);
+  };
+
+  /** クリックした地点にピンを立てる（moonSpinGroup の子として置くので自転に追従する）。 */
+  const placePinAt = (lat: number, lon: number) => {
+    const pin = pinMarkerRef.current;
+    if (!pin) return;
+    const normal = latLongToVector3(lat, lon, 1).normalize();
+    pin.position.copy(normal).multiplyScalar(MOON_RADIUS);
+    pin.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), normal);
+    pin.visible = true;
+  };
+
+  const clearPin = () => {
+    if (pinMarkerRef.current) pinMarkerRef.current.visible = false;
+    updatePinnedInfo(null);
+  };
+
   const handlePointerUp = (e: React.PointerEvent<HTMLCanvasElement>) => {
     const down = pointerDownRef.current;
     pointerDownRef.current = null;
     if (!down) return;
-    // ドラッグ（回転）とクリック（選択）を区別
+    // ドラッグ（回転）とクリック（選択・ピン設置）を区別
     const moved = Math.hypot(e.clientX - down.x, e.clientY - down.y);
     if (moved > 5 || performance.now() - down.t > 500) return;
-    const rc = raycast(e.clientX, e.clientY);
-    const hit = rc && latLonAt(rc);
-    if (!hit) return;
-    const feat = nearestFeature(features, hit.lat, hit.lon);
-    if (feat) onSelectFeature(feat);
+    const info = getHoverInfoAtClient(e.clientX, e.clientY);
+    if (!info) return;
+    // クリックしてある地点にピンを立て、そこのデータを表示する（要望への対応）。
+    // 既知の地点の近くなら、従来どおりその地点として選択しカメラも寄せる。
+    updatePinnedInfo(info);
+    placePinAt(info.lat, info.lon);
+    if (info.feature) onSelectFeature(info.feature);
   };
 
   const zoomBy = (factor: number) => {
@@ -822,7 +903,7 @@ export const MoonViewer3D: React.FC<MoonViewer3DProps> = ({
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
-        onPointerLeave={() => setHoverInfo(null)}
+        onPointerLeave={() => { lastPointerClientRef.current = null; setHoverInfo(null); setTooltipPos(null); }}
         className="w-full h-full cursor-grab active:cursor-grabbing block touch-none"
       />
 
@@ -885,6 +966,39 @@ export const MoonViewer3D: React.FC<MoonViewer3DProps> = ({
             </p>
           )}
           <p className="text-[10px] text-slate-500">出典：{legendSource}</p>
+        </div>
+      )}
+
+      {/* ピン留めした地点（クリックで設置。マウスを離しても消えない）。要望への対応 */}
+      {pinnedInfo && (
+        <div
+          id="pinned-point-card"
+          className="absolute top-16 right-4 bg-slate-900/90 backdrop-blur-md border border-amber-500/40 px-3.5 py-2.5 rounded-2xl shadow-xl flex flex-col gap-1 text-xs text-slate-300 pointer-events-auto max-w-[230px]"
+        >
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-amber-300 font-semibold text-[11px]">📌 ピン留めした地点</span>
+            <button
+              id="btn-clear-pin"
+              onClick={clearPin}
+              title="ピンを消す"
+              className="text-slate-500 hover:text-slate-200 leading-none px-1"
+            >
+              ✕
+            </button>
+          </div>
+          {pinnedInfo.feature && (
+            <div className="text-sm font-semibold text-slate-100">
+              {CATEGORY_EMOJI[pinnedInfo.feature.category] ?? '📍'} {pinnedInfo.feature.nameJa}
+            </div>
+          )}
+          <div className="text-xs text-slate-400 font-mono">
+            Lat: {pinnedInfo.lat}° | Lon: {pinnedInfo.lon}°
+          </div>
+          {pinnedInfo.layerValue && (
+            <div className="text-xs text-rose-300 font-mono">
+              {pinnedInfo.layerValue.label}: <strong>{pinnedInfo.layerValue.value.toFixed(1)}{pinnedInfo.layerValue.unit}</strong>
+            </div>
+          )}
         </div>
       )}
 
