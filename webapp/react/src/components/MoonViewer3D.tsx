@@ -17,7 +17,8 @@ import {
   Play,
   Pause,
   Maximize2,
-  Thermometer
+  Thermometer,
+  Crosshair
 } from 'lucide-react';
 
 // requirements_v3.3 続き（「地球の風」Phase1〜3）：月面に重ねるデータ層。
@@ -222,12 +223,17 @@ export const MoonViewer3D: React.FC<MoonViewer3DProps> = ({
   // クリックして立てたピンの情報。animate ループ（クロージャ）から最新値を読むための ref
   const pinnedInfoRef = useRef<HoverInfo | null>(null);
   const pinMarkerRef = useRef<THREE.Group | null>(null); // クリックした地点に立てる目印（moonSpinGroup の子）
+  // 自転していてもピンを見失わないようにする「追従」の on/off。animate ループから読むための ref も持つ
+  const followPinRef = useRef(false);
 
   // HUD & Hover state。常設ピンは廃止したので、カーソルを合わせた地点の情報をまとめて持つ
   const [hoverInfo, setHoverInfo] = useState<HoverInfo | null>(null);
   const [tooltipPos, setTooltipPos] = useState<{ x: number; y: number } | null>(null);
   // クリックして立てたピンの情報（ホバーと違い、マウスを離しても消えない）
   const [pinnedInfo, setPinnedInfo] = useState<HoverInfo | null>(null);
+  // 自転してもピンを見失わないよう、カメラの向き（経度方向だけ）をピンに合わせ続けるか
+  const [followPin, setFollowPin] = useState(false);
+  followPinRef.current = followPin;
   // 左下の展開図に出す「今カメラが向いている地点」（月面ローカルの緯度経度）＋見えている範囲の半径
   // （limbDeg。カメラが有限距離にあるので、90°の半球まるごとではなく acos(R/カメラ距離) までしか
   // 実際には見えない。「青丸1点しか見えていないわけではない」という指摘への対応で、点ではなく
@@ -671,6 +677,22 @@ export const MoonViewer3D: React.FC<MoonViewer3DProps> = ({
         }
       }
 
+      // ピンへの「追従」：自転で経度方向にだけ動いていくピンを見失わないよう、カメラの
+      // 経度（方位角 theta）だけをピンの現在位置に合わせ続ける。緯度に当たる極角（phi）と
+      // ズーム（radius）はユーザーの操作をそのまま尊重する（自転は Y 軸まわりだけなので、
+      // ピンの緯度＝phi は自転では変化しない。ずれるのは経度＝theta だけ）。
+      if (!focus && followPinRef.current && pinMarkerRef.current?.visible) {
+        // ピンの方位角は自転でずっと動き続ける「動く的」なので、選択地点フォーカスのときのような
+        // 減衰補間（毎フレーム差の一部だけ詰める）だと、動き続ける的に対して恒常的に遅れてしまう
+        // （速度に比例したズレが残り続ける）。ここは毎フレームそのまま合わせて、ズレを残さない。
+        const pinWorld = pinMarkerRef.current.getWorldPosition(new THREE.Vector3());
+        const pinSph = new THREE.Spherical().setFromVector3(pinWorld);
+        spherical.setFromVector3(camera.position.clone().sub(controls.target));
+        spherical.theta = pinSph.theta;
+        spherical.makeSafe();
+        camera.position.setFromSpherical(spherical).add(controls.target);
+      }
+
       // マウスが止まっていても、月本体のほうが自転で動くので、直下の地点は変わり続ける。
       // pointermove イベントだけに頼ると自転中は表示が古いままになる（「ついてこない」指摘への対応）。
       // 間引きながら毎フレーム再計算し、ホバー中のカーソル位置・ピン留めした地点の両方を追従させる。
@@ -929,6 +951,7 @@ export const MoonViewer3D: React.FC<MoonViewer3DProps> = ({
   const clearPin = () => {
     if (pinMarkerRef.current) pinMarkerRef.current.visible = false;
     updatePinnedInfo(null);
+    setFollowPin(false); // ピンが無くなったら追従も解除
   };
 
   const handlePointerUp = (e: React.PointerEvent<HTMLCanvasElement>) => {
@@ -1067,14 +1090,29 @@ export const MoonViewer3D: React.FC<MoonViewer3DProps> = ({
         >
           <div className="flex items-center justify-between gap-2">
             <span className="text-amber-300 font-semibold text-[11px]">📌 ピン留めした地点</span>
-            <button
-              id="btn-clear-pin"
-              onClick={clearPin}
-              title="ピンを消す"
-              className="text-slate-500 hover:text-slate-200 leading-none px-1"
-            >
-              ✕
-            </button>
+            <div className="flex items-center gap-1">
+              <button
+                id="btn-toggle-follow-pin"
+                onClick={() => setFollowPin((v) => !v)}
+                title={followPin ? '自転してもピンを追いかけるのを止める' : '自転してもピンを見失わないようにする'}
+                className={`flex items-center gap-0.5 px-1.5 py-0.5 rounded-md border text-[10px] transition-colors ${
+                  followPin
+                    ? 'bg-cyan-500/20 text-cyan-300 border-cyan-500/40'
+                    : 'text-slate-400 border-slate-600 hover:text-slate-200'
+                }`}
+              >
+                <Crosshair className="w-3 h-3" />
+                追従
+              </button>
+              <button
+                id="btn-clear-pin"
+                onClick={clearPin}
+                title="ピンを消す"
+                className="text-slate-500 hover:text-slate-200 leading-none px-1"
+              >
+                ✕
+              </button>
+            </div>
           </div>
           {pinnedInfo.feature && (
             <div className="text-sm font-semibold text-slate-100">
