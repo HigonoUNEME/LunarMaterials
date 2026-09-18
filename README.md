@@ -5,7 +5,7 @@
 
 ## ▶ ブラウザで開く（インストール不要）
 
-**https://\<ユーザー名\>.github.io/\<リポジトリ名\>/**
+**https://higonouneme.github.io/moon-data-lesson/**
 
 | ページ | 内容 |
 |---|---|
